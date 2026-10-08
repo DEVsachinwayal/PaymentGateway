@@ -45,3 +45,6 @@
 - NOT done (explicit): React dashboard pages for login/API keys/webhooks (frontend/ is still empty). Planned as a dedicated frontend step after M4 so the UI can show orders as well.
 - .env now also holds INTERNAL_SERVICE_TOKEN, API_KEY_HASH_PEPPER, WEBHOOK_SECRET_KEY (local, git-ignored). Names are listed in .env.example (update it!).
 - Next step: M4 Order – `services/order-service` (orders, customers, order_items; amount in minor units; merchant ownership via X-Merchant-Id; Idempotency-Key on create), gateway route /api/v1/orders/**.
+
+## 2026-10-09 – apg-common: IdempotencyService (branch feature/apg-common)
+- Added IdempotencyService + auto-config (active when a JdbcTemplate exists). Tests incl. 8-thread concurrent duplicate => action runs once. common 10/10; auth 8/8 and merchant 8/8 still green.
