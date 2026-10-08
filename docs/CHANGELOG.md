@@ -6,3 +6,4 @@
 - M2.1: auth-service (register/login/refresh/logout).
 - M2.2: api-gateway (JWT validation, rate limit, correlation ID, CORS).
 - M3: merchant-service, API-key auth at gateway, internal trust token.
+- Adopted per-service branch workflow (see WORK.md).

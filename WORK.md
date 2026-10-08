@@ -36,3 +36,12 @@ User communicates in Marathi/English. User asked: build the whole project per sp
 | M15 | OCI + CI/CD (needs user's OCI account) | todo |
 | M16 | Release readiness | todo |
 Frontend (React merchant dashboard) is built incrementally alongside M3..M11.
+
+## Git branching rules (from user request, 2026-10-09)
+- `main` = integrated, always-green code. Never develop directly on main (docs-only notes excepted).
+- ONE BRANCH PER SERVICE: `feature/<service-name>` (e.g. `feature/order-service`, `feature/payment-service`). Work and commit there; before merge run that service's tests (+ gateway tests if the gateway changed).
+- Merge into main with `git merge --no-ff feature/<service>` and KEEP the branch (do not delete) so later changes to that service start from it.
+- Later changes to an existing service: `git checkout feature/<service>` (merge main into it first), commit, merge back with --no-ff.
+- Changes that touch shared code (`libs/apg-common`, gateway, root pom) go on `feature/common-<topic>` or `feature/api-gateway` branches.
+- Existing services (auth, gateway, merchant, common) were built on main before this rule; their branches are created at the current main so future work follows the rule: `feature/auth-service`, `feature/api-gateway`, `feature/merchant-service`, `feature/apg-common`.
+- Commit message prefix: `<service>: ...` e.g. `order-service: add idempotent create`.
