@@ -46,6 +46,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception e) {
+        // Spring MVC's own protocol errors (415 unsupported media type, 406, 400 missing header, ...) carry their status.
+        if (e instanceof org.springframework.web.ErrorResponse er && er.getStatusCode().is4xxClientError()) {
+            HttpStatus s = HttpStatus.valueOf(er.getStatusCode().value());
+            return ResponseEntity.status(s).body(ApiResponse.fail(ApiError.of("HTTP_" + s.value(), s.getReasonPhrase())));
+        }
         log.error("Unhandled exception", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.fail(ApiError.of("INTERNAL_ERROR", "Unexpected error")));
