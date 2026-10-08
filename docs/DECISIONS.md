@@ -17,3 +17,11 @@ Run by plain `mvn test`; Testcontainers Ryuk disabled via env on this machine (i
 apg-common is servlet-based, gateway is WebFlux. Error envelope is duplicated minimally in `ErrorResponses`.
 ## D9 – Rate limiting fails open if Redis is down
 Spring Cloud Gateway RedisRateLimiter default. Redis is not source of truth (spec 18); revisit in M13.
+## D10 – Internal trust via X-Internal-Token + gateway-injected identity headers
+Services behind the gateway reject requests without the shared INTERNAL_SERVICE_TOKEN (GatewayTrustFilter in apg-common) and read identity from X-User-*/X-Merchant-Id/X-Auth-Type. Alternative: every service re-validates JWT (more defense in depth). Consequence: network isolation + token are the trust boundary; revisit with mTLS in M13/M15.
+## D11 – API key secret hashed with HMAC-SHA256 + pepper, not bcrypt
+Secrets are 256-bit random, so a fast keyed hash is safe and keeps per-request verification cheap. Pepper in env.
+## D12 – Gateway verifies API keys by calling merchant-service on every request (no cache yet)
+Correct revocation semantics first; add short Redis cache in M12/M14 if latency demands (TODO).
+## D13 – Webhook signing secret is encrypted (AES-GCM), not hashed
+It must be reusable to sign outbound webhooks (M12).

@@ -7,7 +7,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "apg.gateway")
 public record GatewayProperties(
         String jwtSecret,
+        String internalToken,
         String authUri,
+        String merchantUri,
         List<String> corsAllowedOrigins,
         long maxRequestBytes,
         RateLimit rateLimit) {
@@ -17,6 +19,9 @@ public record GatewayProperties(
     public GatewayProperties {
         if (jwtSecret == null || jwtSecret.getBytes(StandardCharsets.UTF_8).length < 32) {
             throw new IllegalStateException("apg.gateway.jwt-secret (JWT_SECRET) must be at least 32 bytes");
+        }
+        if (internalToken == null || internalToken.length() < 16) {
+            throw new IllegalStateException("apg.gateway.internal-token (INTERNAL_SERVICE_TOKEN) must be at least 16 chars");
         }
     }
 }

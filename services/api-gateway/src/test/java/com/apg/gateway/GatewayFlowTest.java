@@ -50,13 +50,36 @@ class GatewayFlowTest {
         try {
             HttpServer s = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
             s.createContext("/", ex -> {
-                String body = "{\"path\":\"" + ex.getRequestURI().getPath() + "\",\"userId\":\""
-                        + nz(ex.getRequestHeaders().getFirst("X-User-Id")) + "\",\"roles\":\""
-                        + nz(ex.getRequestHeaders().getFirst("X-User-Roles")) + "\",\"corr\":\""
-                        + nz(ex.getRequestHeaders().getFirst("X-Correlation-Id")) + "\"}";
+                String path = ex.getRequestURI().getPath();
+                int code = 200;
+                String body;
+                if (path.equals("/internal/v1/api-keys/verify")) {
+                    String in = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                    if (in.contains("sk_test_good.secret")) {
+                        body = "{\"data\":{\"merchantId\":\"merch-api\",\"apiKeyId\":\"key-1\",\"mode\":\"TEST\"}}";
+                    } else {
+                        code = 401;
+                        body = "{\"error\":{\"code\":\"INVALID_API_KEY\"}}";
+                    }
+                } else if (path.startsWith("/internal/v1/users/")) {
+                    if (path.contains("user-123")) {
+                        body = "{\"data\":{\"merchantId\":\"merch-user\"}}";
+                    } else {
+                        code = 404;
+                        body = "{\"error\":{\"code\":\"NO_MERCHANT\"}}";
+                    }
+                } else {
+                    body = "{\"path\":\"" + path + "\",\"userId\":\""
+                            + nz(ex.getRequestHeaders().getFirst("X-User-Id")) + "\",\"roles\":\""
+                            + nz(ex.getRequestHeaders().getFirst("X-User-Roles")) + "\",\"merchant\":\""
+                            + nz(ex.getRequestHeaders().getFirst("X-Merchant-Id")) + "\",\"authType\":\""
+                            + nz(ex.getRequestHeaders().getFirst("X-Auth-Type")) + "\",\"internal\":\""
+                            + nz(ex.getRequestHeaders().getFirst("X-Internal-Token")) + "\",\"corr\":\""
+                            + nz(ex.getRequestHeaders().getFirst("X-Correlation-Id")) + "\"}";
+                }
                 byte[] b = body.getBytes(StandardCharsets.UTF_8);
                 ex.getResponseHeaders().add("Content-Type", "application/json");
-                ex.sendResponseHeaders(200, b.length);
+                ex.sendResponseHeaders(code, b.length);
                 ex.getResponseBody().write(b);
                 ex.close();
             });
@@ -74,6 +97,8 @@ class GatewayFlowTest {
         String url = "http://127.0.0.1:" + backend.getAddress().getPort();
         r.add("apg.gateway.jwt-secret", () -> SECRET);
         r.add("apg.gateway.auth-uri", () -> url);
+        r.add("apg.gateway.merchant-uri", () -> url);
+        r.add("apg.gateway.internal-token", () -> "internal-token-for-tests-123");
         r.add("apg.gateway.rate-limit.replenish-per-second", () -> 1);
         r.add("apg.gateway.rate-limit.burst", () -> 3);
         r.add("spring.data.redis.host", redis::getHost);
@@ -90,8 +115,10 @@ class GatewayFlowTest {
     static class ExtraRoutes {
         @Bean
         RouteLocator protectedTestRoute(RouteLocatorBuilder b, org.springframework.core.env.Environment env) {
-            return b.routes().route("protected-test", r -> r.path("/api/v1/protected-test/**")
-                    .uri(env.getProperty("test.backend.url"))).build();
+            return b.routes()
+                    .route("protected-test", r -> r.path("/api/v1/protected-test/**").uri(env.getProperty("test.backend.url")))
+                    .route("orders-test", r -> r.path("/api/v1/orders/**").uri(env.getProperty("test.backend.url")))
+                    .build();
         }
     }
 
@@ -131,6 +158,36 @@ class GatewayFlowTest {
                 .expectBody()
                 .jsonPath("$.userId").isEqualTo("user-123")
                 .jsonPath("$.roles").isEqualTo("MERCHANT_ADMIN");
+    }
+
+    @Test @Order(2)
+    void userRequestsCarryMerchantAndInternalTokenAndSpoofedMerchantIsIgnored() {
+        web.get().uri("/api/v1/protected-test/x")
+                .header("Authorization", "Bearer " + valid())
+                .header("X-Merchant-Id", "attacker-merchant").header("X-Auth-Type", "API_KEY")
+                .header("X-Internal-Token", "guess")
+                .exchange().expectStatus().isOk().expectBody()
+                .jsonPath("$.merchant").isEqualTo("merch-user")
+                .jsonPath("$.authType").isEqualTo("USER")
+                .jsonPath("$.internal").isEqualTo("internal-token-for-tests-123");
+        // user without a merchant: no X-Merchant-Id at all
+        web.get().uri("/api/v1/protected-test/x")
+                .header("Authorization", "Bearer " + token("user-no-merchant", List.of("MERCHANT_ADMIN"), Instant.now().plusSeconds(60), KEY))
+                .exchange().expectStatus().isOk().expectBody().jsonPath("$.merchant").isEqualTo("");
+    }
+
+    @Test @Order(2)
+    void apiKeyAuthenticationForMerchantApiPathsOnly() {
+        web.get().uri("/api/v1/orders/abc").header("Authorization", "Bearer sk_test_good.secret")
+                .header("X-Merchant-Id", "attacker").exchange().expectStatus().isOk().expectBody()
+                .jsonPath("$.merchant").isEqualTo("merch-api").jsonPath("$.authType").isEqualTo("API_KEY")
+                .jsonPath("$.userId").isEqualTo("");
+        web.get().uri("/api/v1/protected-test/x").header("X-Api-Key", "sk_test_good.secret")
+                .exchange().expectStatus().isForbidden().expectBody().jsonPath("$.error.code").isEqualTo("FORBIDDEN_FOR_API_KEY");
+        web.get().uri("/api/v1/merchants/me").header("X-Api-Key", "sk_test_good.secret")
+                .exchange().expectStatus().isForbidden();
+        web.get().uri("/api/v1/orders/abc").header("X-Api-Key", "sk_test_bad.secret")
+                .exchange().expectStatus().isUnauthorized().expectBody().jsonPath("$.error.code").isEqualTo("INVALID_API_KEY");
     }
 
     @Test @Order(3)

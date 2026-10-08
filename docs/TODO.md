@@ -12,3 +12,8 @@ M2 Gateway+Auth, M3 Merchant, M4 Order, M5 Payment, M6 Orchestration, M7 Provide
 - [ ] Rate limiter key from X-Forwarded-For behind OCI LB (M15)
 - [ ] Move JWT to asymmetric keys / JWKS (M13)
 - [ ] Gateway: structured JSON logs (M13)
+- [ ] Frontend (React dashboard): login, API keys, webhook endpoints, orders — not started
+- [ ] Team management: add MERCHANT_DEVELOPER users to a merchant (merchant_users supports it, no API yet)
+- [ ] Ops API to activate merchants (SANDBOX -> ACTIVE) after KYC (EXTERNAL DEPENDENCY)
+- [ ] Re-validate webhook URL resolved IP at delivery time (M12)
+- [ ] Short Redis cache for API key verification (M12/M14)

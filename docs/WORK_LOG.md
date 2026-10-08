@@ -35,3 +35,13 @@
 - Run: `set -a; . ./.env; set +a` then `java -jar` auth-service (8081) and api-gateway (8080). Kill with `taskkill //F //IM java.exe`.
 - Known gaps (tracked in TODO): admin API for granting privileged roles; X-Forwarded-For key for rate limiter behind OCI LB; asymmetric JWT keys.
 - Next step: M3 Merchant – `services/merchant-service` (merchants, merchant_users, api_keys hashed + shown once, rotate/revoke, webhook_endpoints), gateway route + API-key authentication filter, then start `frontend/` login + API keys page.
+
+## 2026-10-09 – M3 Merchant  => backend DONE
+- apg-common: GatewayTrustFilter (X-Internal-Token), CallerContext + resolver, extra exception mappings (400/404/405).
+- merchant-service (8082, DB apg_merchant): merchants/merchant_users/merchant_settings/api_keys/webhook_endpoints, API key create/list/rotate(grace)/revoke, verify endpoint, webhook URL SSRF validator, AES-GCM secret encryption. Tests MerchantFlowTest 8/8.
+- api-gateway: API-key auth, merchant lookup for JWT users, anti-spoofing of all identity headers, X-Internal-Token to downstream, merchant routes. Tests 9/9.
+- E2E smoke (3 services + DB + Redis): create merchant, TEST key issued once, LIVE key blocked, API key blocked on mgmt endpoints, direct call without token -> 401, /internal not exposed -> 404.
+- Fix during work: CHAR(3) vs Hibernate varchar validation -> VARCHAR(3).
+- NOT done (explicit): React dashboard pages for login/API keys/webhooks (frontend/ is still empty). Planned as a dedicated frontend step after M4 so the UI can show orders as well.
+- .env now also holds INTERNAL_SERVICE_TOKEN, API_KEY_HASH_PEPPER, WEBHOOK_SECRET_KEY (local, git-ignored). Names are listed in .env.example (update it!).
+- Next step: M4 Order – `services/order-service` (orders, customers, order_items; amount in minor units; merchant ownership via X-Merchant-Id; Idempotency-Key on create), gateway route /api/v1/orders/**.

@@ -40,6 +40,13 @@ public class GatewayConfig {
                                 .setRequestSize(props.maxRequestBytes())
                                 .secureHeaders())
                         .uri(props.authUri()))
+                .route("merchant-service", r -> r
+                        .path("/api/v1/merchants/**", "/api/v1/api-keys/**", "/api/v1/webhook-endpoints/**")
+                        .filters(f -> f
+                                .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))
+                                .setRequestSize(props.maxRequestBytes())
+                                .secureHeaders())
+                        .uri(props.merchantUri()))
                 .build();
     }
 
