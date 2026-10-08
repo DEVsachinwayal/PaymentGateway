@@ -63,3 +63,7 @@
 - Tests: PaymentStatusTest 3 (full 11x11 matrix vs spec) + PaymentFlowTest 11 = 14/14 (incl. concurrent create => 1 payment, conflicting concurrent transitions => 1 winner, duplicate webhook no-op, timeout->VERIFY_REQUIRED).
 - order-service got `/internal/v1/orders/{id}` (7/7 tests).
 - Next: gateway route /api/v1/payments (branch feature/api-gateway), then M6 Orchestrator + M7 Provider/PayU (needs user's PayU sandbox key/salt at M7).
+
+## 2026-10-09 – gateway route for payments (branch feature/api-gateway) => M5 DONE
+- Route /api/v1/payments -> payment-service. Gateway 9/9. E2E (5 services): API-key order 123456 -> payment CREATED with amount from order; client "status":"SUCCESS" => MALFORMED_REQUEST; 2nd payment same order => PAYMENT_ALREADY_EXISTS; /internal not reachable via gateway (404) and direct call without token => 401; DB shows payment CREATED + payment.created outbox event.
+- Next step: M6 Orchestrator + M7 Provider/PayU. Plan: `services/provider-integration` (PaymentProvider interface + PayU adapter + provider_configs/provider_attempts/provider_audit) on branch feature/provider-integration, `services/payment-orchestrator` on feature/payment-orchestrator (provider selection, payment_attempts, timeout->VERIFY_REQUIRED, verification worker). REQUIRES from user: PayU sandbox merchant key + salt (EXTERNAL DEPENDENCY) before the real sandbox flow can run; until then build against the interface + signed-request unit tests.

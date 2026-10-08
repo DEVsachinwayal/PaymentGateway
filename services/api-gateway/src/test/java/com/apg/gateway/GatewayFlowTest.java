@@ -99,6 +99,7 @@ class GatewayFlowTest {
         r.add("apg.gateway.auth-uri", () -> url);
         r.add("apg.gateway.merchant-uri", () -> url);
         r.add("apg.gateway.order-uri", () -> url);
+        r.add("apg.gateway.payment-uri", () -> url);
         r.add("apg.gateway.internal-token", () -> "internal-token-for-tests-123");
         r.add("apg.gateway.rate-limit.replenish-per-second", () -> 1);
         r.add("apg.gateway.rate-limit.burst", () -> 3);

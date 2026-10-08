@@ -11,6 +11,7 @@ public record GatewayProperties(
         String authUri,
         String merchantUri,
         String orderUri,
+        String paymentUri,
         List<String> corsAllowedOrigins,
         long maxRequestBytes,
         RateLimit rateLimit) {
