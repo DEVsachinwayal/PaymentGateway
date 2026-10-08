@@ -53,6 +53,18 @@ public class GatewayConfig {
                                 .setRequestSize(props.maxRequestBytes())
                                 .secureHeaders())
                         .uri(props.orderUri()))
+                // must come BEFORE the generic payments route: checkout belongs to the orchestrator
+                .route("orchestrator-checkout", r -> r.path("/api/v1/payments/{id}/checkout")
+                        .filters(f -> f
+                                .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))
+                                .setRequestSize(props.maxRequestBytes())
+                                .secureHeaders())
+                        .uri(props.orchestratorUri()))
+                // hosted redirect page opened by the customer's browser (public; protected by a signed token)
+                .route("checkout-page", r -> r.path("/checkout/**")
+                        .filters(f -> f
+                                .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver)))
+                        .uri(props.orchestratorUri()))
                 .route("payment-service", r -> r.path("/api/v1/payments/**", "/api/v1/payments")
                         .filters(f -> f
                                 .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))

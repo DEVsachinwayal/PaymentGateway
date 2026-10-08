@@ -116,8 +116,13 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
 
     private static boolean isPublic(ServerWebExchange ex) {
         String path = ex.getRequest().getURI().getPath();
-        return (HttpMethod.POST.equals(ex.getRequest().getMethod()) && PUBLIC_POST.contains(path))
-                || path.startsWith("/actuator/health");
+        HttpMethod m = ex.getRequest().getMethod();
+        return (HttpMethod.POST.equals(m) && PUBLIC_POST.contains(path))
+                || path.startsWith("/actuator/health")
+                // customer-facing: hosted checkout redirect page (signed token) ...
+                || (HttpMethod.GET.equals(m) && path.startsWith("/checkout/"))
+                // ... and provider callbacks, which are authenticated by the provider's signature, not by us (M8)
+                || (HttpMethod.POST.equals(m) && path.startsWith("/api/v1/webhooks/"));
     }
 
     @Override
