@@ -1,0 +1,34 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: merchant-service
+  datasource:
+    url: ${MERCHANT_DB_URL:jdbc:postgresql://localhost:5433/apg_merchant}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+apg:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN}
+  merchant:
+    # HMAC pepper for API-key secret hashing and AES key (base64, 32 bytes) for webhook signing secrets.
+    api-key-pepper: ${API_KEY_HASH_PEPPER}
+    webhook-secret-key: ${WEBHOOK_SECRET_KEY}
+    allow-insecure-webhook-urls: false
+    rotation-grace-hours-default: 24

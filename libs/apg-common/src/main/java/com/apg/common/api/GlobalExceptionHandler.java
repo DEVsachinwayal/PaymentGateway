@@ -26,6 +26,24 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail(new ApiError("VALIDATION_FAILED", "Request validation failed", issues)));
     }
 
+    @ExceptionHandler({org.springframework.http.converter.HttpMessageNotReadableException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+            org.springframework.web.bind.MissingServletRequestParameterException.class})
+    ResponseEntity<ApiResponse<Void>> handleMalformed(Exception e) {
+        return ResponseEntity.badRequest().body(ApiResponse.fail(ApiError.of("MALFORMED_REQUEST", "Malformed request")));
+    }
+
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    ResponseEntity<ApiResponse<Void>> handleNotFound(Exception e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.fail(ApiError.of("NOT_FOUND", "Resource not found")));
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    ResponseEntity<ApiResponse<Void>> handleMethod(Exception e) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(ApiResponse.fail(ApiError.of("METHOD_NOT_ALLOWED", "Method not allowed")));
+    }
+
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception e) {
         log.error("Unhandled exception", e);
