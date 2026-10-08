@@ -1,0 +1,78 @@
+import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { useAuth } from './auth'
+import { Spinner } from './components'
+import { Badge } from './components'
+import AuthPage from './pages/AuthPage'
+import Onboarding from './pages/Onboarding'
+import Overview from './pages/Overview'
+import Payments from './pages/Payments'
+import PaymentDetail from './pages/PaymentDetail'
+import Orders from './pages/Orders'
+import ApiKeys from './pages/ApiKeys'
+import Webhooks from './pages/Webhooks'
+import Settings from './pages/Settings'
+
+const NAV: [string, string, string][] = [
+  ['/', '🏠', 'Overview'],
+  ['/payments', '💳', 'Payments'],
+  ['/orders', '🧾', 'Orders'],
+]
+const DEV: [string, string, string][] = [
+  ['/api-keys', '🔑', 'API keys'],
+  ['/webhooks', '🔔', 'Webhooks'],
+  ['/settings', '⚙️', 'Settings'],
+]
+const SOON = ['Refunds', 'Settlements', 'Payment links']
+
+export default function App() {
+  const { ready, email, merchant, needsOnboarding, logout } = useAuth()
+  if (!ready) return <Spinner />
+  if (!email) return <AuthPage />
+  if (needsOnboarding) return <Onboarding />
+  if (!merchant) return <Spinner />
+
+  const link = ([to, icon, label]: [string, string, string]) => (
+    <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
+      <span>{icon}</span>{label}
+    </NavLink>
+  )
+  return (
+    <div className="shell">
+      <aside className="side">
+        <div className="logo"><i>⚡</i>APG</div>
+        <nav className="nav">
+          <div className="label">Money</div>
+          {NAV.map(link)}
+          {SOON.map((s) => <div key={s} className="soon"><span>⏳</span>{s}<em>soon</em></div>)}
+          <div className="label">Developers</div>
+          {DEV.map(link)}
+        </nav>
+        <div className="foot">
+          <b>{merchant.name}</b>
+          <span style={{ opacity: .7 }}>{email}</span>
+          <div className="row" style={{ marginTop: 10, justifyContent: 'space-between' }}>
+            <Badge status={merchant.status} />
+            <button className="btn sm" onClick={logout}>Log out</button>
+          </div>
+        </div>
+      </aside>
+      <main className="main">
+        {merchant.status !== 'ACTIVE' && (
+          <div className="alert warn">
+            <b>Test mode.</b> This account is in sandbox. Only TEST API keys work, and no real money moves until your business is activated.
+          </div>
+        )}
+        <Routes>
+          <Route path="/" element={<Overview />} />
+          <Route path="/payments" element={<Payments />} />
+          <Route path="/payments/:id" element={<PaymentDetail />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/api-keys" element={<ApiKeys />} />
+          <Route path="/webhooks" element={<Webhooks />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+    </div>
+  )
+}
