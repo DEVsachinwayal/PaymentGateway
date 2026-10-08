@@ -7,5 +7,4 @@ M2 Gateway+Auth, M3 Merchant, M4 Order, M5 Payment, M6 Orchestration, M7 Provide
 - OCI account/billing, domain, TLS certificate
 - Email/SMS provider (if used), PCI/compliance assessment, banking/acquirer agreements
 ## Open items
-- [ ] Start Docker Desktop and verify `docker compose up -d` healthy (M1 runtime verification pending)
 - [ ] Structured JSON logging config (add with first service, logback + MDC correlationId)

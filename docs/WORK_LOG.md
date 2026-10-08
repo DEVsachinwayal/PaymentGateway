@@ -15,3 +15,9 @@
 - `docker compose config` valid. **NOT runtime-verified: Docker Desktop daemon was not running.** User must start Docker Desktop, then `docker compose up -d` to verify.
 - Bash heredocs with certain content failed on this machine; use the Write tool for creating files.
 - Next step: M2 – start Docker, then create `services/auth-service` (Flyway + JPA + JWT + refresh rotation) and `services/api-gateway` (Spring Cloud Gateway 2025.0.x).
+
+## 2026-10-08 – M1 runtime verification
+- Started Docker Desktop; `docker compose up -d`: postgres16, redis7, kafka all **healthy**; 10 per-service databases (apg_auth ... apg_notification) created by init script.
+- Docker Hub pulls of `apache/kafka:3.9.0` failed (network EOF/DNS). Switched to locally cached `apache/kafka-native:4.1.2`; healthcheck changed to `nc -z localhost 9092` (native image has no kafka bin scripts). Decision D4.
+- Local .env (git-ignored): POSTGRES_USER=apg, dummy local passwords.
+- Next step: M2 – services/auth-service then services/api-gateway.
