@@ -10,6 +10,7 @@ public record GatewayProperties(
         String internalToken,
         String authUri,
         String merchantUri,
+        String orderUri,
         List<String> corsAllowedOrigins,
         long maxRequestBytes,
         RateLimit rateLimit) {

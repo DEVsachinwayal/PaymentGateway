@@ -47,6 +47,12 @@ public class GatewayConfig {
                                 .setRequestSize(props.maxRequestBytes())
                                 .secureHeaders())
                         .uri(props.merchantUri()))
+                .route("order-service", r -> r.path("/api/v1/orders/**", "/api/v1/orders")
+                        .filters(f -> f
+                                .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))
+                                .setRequestSize(props.maxRequestBytes())
+                                .secureHeaders())
+                        .uri(props.orderUri()))
                 .build();
     }
 
