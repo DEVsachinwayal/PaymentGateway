@@ -1,0 +1,40 @@
+server:
+  port: 8086
+
+spring:
+  application:
+    name: payment-orchestrator
+  datasource:
+    url: ${ORCHESTRATOR_DB_URL:jdbc:postgresql://localhost:5433/apg_orchestrator}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  jackson:
+    deserialization:
+      accept-float-as-int: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+apg:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN}
+  orchestrator:
+    # Browser-reachable base URL of the API gateway (checkout page + provider callbacks are built from it).
+    public-base-url: ${PUBLIC_BASE_URL:http://localhost:8080}
+    checkout-token-secret: ${CHECKOUT_TOKEN_SECRET}
+    checkout-token-ttl: 30m
+    payment-service-uri: ${PAYMENT_SERVICE_URI:http://localhost:8084}
+    provider-service-uri: ${PROVIDER_SERVICE_URI:http://localhost:8085}
+    verification:
+      enabled: true
+      interval: 30s
+      min-age: 60s            # only look at payments untouched for this long
+      processing-timeout: 15m # provider still says pending after this => VERIFY_REQUIRED
+      abandon-after: 30m      # provider has never heard of the txn after this => customer never arrived => FAILED

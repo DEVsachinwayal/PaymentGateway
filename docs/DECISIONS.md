@@ -45,3 +45,9 @@ Timeouts, 429, malformed bodies => ProviderException => HTTP 502 => orchestrator
 `success` with `auth` (authorised only) is PENDING until captured.
 ## D23 – Test PayU is a fake server that validates hashes + one opt-in live test
 Unit tests never contact PayU (it rate-limits bad callers); the live test is opt-in.
+## D24 – No automatic provider failover yet
+Failover is only safe before the customer is sent to a provider, or after the provider proved it never saw the txn. With one provider the routing record and rules are in place; failover is a TODO for when a second provider exists.
+## D25 – Hosted redirect page with signed stateless token
+The browser never sees API keys; the page only auto-submits provider-signed fields. Token = HMAC(attemptReference, expiry); expired => 410.
+## D26 – Unknown amounts or provider doubts never settle as SUCCESS
+Amount mismatch between provider and our payment => VERIFY_REQUIRED for ops, not SUCCESS.

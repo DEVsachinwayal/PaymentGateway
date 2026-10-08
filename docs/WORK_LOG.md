@@ -88,3 +88,7 @@
 - New service provider-integration (8085, DB apg_provider): PaymentProvider port, PayU adapter (checkout hash, verify_payment, refund, callback hash verification, circuit breaker, sanitized call log).
 - Tests 22/22 offline (hash vectors from openssl, FakePayU validating hashes, tampered-callback matrix, timeout/429/HTML/circuit, audit tables contain no salt/hash) + opt-in live sandbox test PASSED once: PayU test.payu.in accepted our Java-computed signature (NOT_FOUND for unknown txn).
 - Next: payment-orchestrator (feature/payment-orchestrator): POST /api/v1/payments/{id}/checkout, provider selection, hosted redirect page, verification worker; then webhook-service.
+
+## 2026-10-09 – payment-orchestrator (branch feature/payment-orchestrator)
+- New service (8086, DB apg_orchestrator, created also in init script): routing + attempt start + hosted redirect page + verification service/worker. Tests 15/15 (fake payment/provider backends with the same transition rules, mutable clock).
+- Next: gateway routes (/api/v1/payments/{id}/checkout, public GET /checkout/**), then webhook-service (callback from PayU -> verify hash -> orchestrator verify -> redirect browser).
