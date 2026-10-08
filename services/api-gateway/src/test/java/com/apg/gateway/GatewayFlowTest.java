@@ -100,6 +100,7 @@ class GatewayFlowTest {
         r.add("apg.gateway.merchant-uri", () -> url);
         r.add("apg.gateway.order-uri", () -> url);
         r.add("apg.gateway.payment-uri", () -> url);
+        r.add("apg.gateway.orchestrator-uri", () -> url);
         r.add("apg.gateway.internal-token", () -> "internal-token-for-tests-123");
         r.add("apg.gateway.rate-limit.replenish-per-second", () -> 1);
         r.add("apg.gateway.rate-limit.burst", () -> 3);
@@ -189,6 +190,15 @@ class GatewayFlowTest {
                 .exchange().expectStatus().isForbidden();
         web.get().uri("/api/v1/orders/abc").header("X-Api-Key", "sk_test_bad.secret")
                 .exchange().expectStatus().isUnauthorized().expectBody().jsonPath("$.error.code").isEqualTo("INVALID_API_KEY");
+    }
+
+    @Test @Order(2)
+    void checkoutPageIsPublicButCheckoutApiIsNot() {
+        web.get().uri("/checkout/some-token").exchange().expectStatus().isOk().expectBody()
+                .jsonPath("$.path").isEqualTo("/checkout/some-token").jsonPath("$.internal").isEqualTo("internal-token-for-tests-123");
+        web.post().uri("/api/v1/payments/abc/checkout").exchange().expectStatus().isUnauthorized();
+        web.post().uri("/api/v1/payments/abc/checkout").header("X-Api-Key", "sk_test_good.secret").exchange()
+                .expectStatus().isOk().expectBody().jsonPath("$.merchant").isEqualTo("merch-api");
     }
 
     @Test @Order(3)

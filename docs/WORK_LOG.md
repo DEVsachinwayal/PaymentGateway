@@ -92,3 +92,6 @@
 ## 2026-10-09 – payment-orchestrator (branch feature/payment-orchestrator)
 - New service (8086, DB apg_orchestrator, created also in init script): routing + attempt start + hosted redirect page + verification service/worker. Tests 15/15 (fake payment/provider backends with the same transition rules, mutable clock).
 - Next: gateway routes (/api/v1/payments/{id}/checkout, public GET /checkout/**), then webhook-service (callback from PayU -> verify hash -> orchestrator verify -> redirect browser).
+
+## 2026-10-09 – gateway routes for checkout (branch feature/api-gateway)
+- /api/v1/payments/{id}/checkout -> orchestrator (declared before generic payments route), public GET /checkout/** -> orchestrator, POST /api/v1/webhooks/** marked public (provider-signature authenticated, route comes with webhook-service). Gateway tests 10/10 (note: use `mvn clean test` after editing tests - a stale class once hid a new test).
