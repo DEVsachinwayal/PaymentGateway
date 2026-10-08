@@ -67,3 +67,11 @@
 ## 2026-10-09 – gateway route for payments (branch feature/api-gateway) => M5 DONE
 - Route /api/v1/payments -> payment-service. Gateway 9/9. E2E (5 services): API-key order 123456 -> payment CREATED with amount from order; client "status":"SUCCESS" => MALFORMED_REQUEST; 2nd payment same order => PAYMENT_ALREADY_EXISTS; /internal not reachable via gateway (404) and direct call without token => 401; DB shows payment CREATED + payment.created outbox event.
 - Next step: M6 Orchestrator + M7 Provider/PayU. Plan: `services/provider-integration` (PaymentProvider interface + PayU adapter + provider_configs/provider_attempts/provider_audit) on branch feature/provider-integration, `services/payment-orchestrator` on feature/payment-orchestrator (provider selection, payment_attempts, timeout->VERIFY_REQUIRED, verification worker). REQUIRES from user: PayU sandbox merchant key + salt (EXTERNAL DEPENDENCY) before the real sandbox flow can run; until then build against the interface + signed-request unit tests.
+
+## 2026-10-09 – PayU credentials check (no code change)
+- Researched PayU docs (hash formulas, verify_payment, refund, _payment params) – captured in docs/PAYU_INTEGRATION.md.
+- .env has PAYU_MERCHANT_KEY (6 chars), PAYU_MERCHANT_SALT (32 chars), PAYU_BASE_URL (https://test.payu.in); format is clean (alnum only, no quotes/spaces).
+- Live check: `verify_payment` on https://test.payu.in/merchant/postservice?form=2 with sha512(key|verify_payment|txnid|salt) => `{"status":0,"msg":"Invalid Hash."}`. So the key/salt pair is NOT accepted as a TEST pair (wrong salt, live/test mix-up, or account not enabled).
+- DO NOT hammer PayU: a second host answered 429 "Invalid requests limit reached". Retry only after the user confirms new values; use at most one verify call per attempt.
+- Action for user: re-copy Key + Salt (32 bit) from PayU dashboard with TEST MODE toggle ON (Developer > API Details/Keys); or raise a ticket at help.payu.in if keys are not visible.
+- Meanwhile: build independent milestones (M10 Ledger, M11 Settlement/Reconciliation, M12 Kafka/Redis/Notifications) and PayU adapter code with hash unit tests that need no live credentials.
