@@ -29,5 +29,6 @@
     <module>services/payment-service</module>
     <module>services/provider-integration</module>
     <module>services/payment-orchestrator</module>
+    <module>services/webhook-service</module>
   </modules>
 </project>

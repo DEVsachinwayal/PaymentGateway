@@ -1,0 +1,39 @@
+server:
+  port: 8087
+  tomcat:
+    max-swallow-size: 128KB
+    max-http-form-post-size: 64KB
+
+spring:
+  application:
+    name: webhook-service
+  datasource:
+    url: ${WEBHOOK_DB_URL:jdbc:postgresql://localhost:5433/apg_webhook}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+apg:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN}
+  webhook:
+    provider-service-uri: ${PROVIDER_SERVICE_URI:http://localhost:8085}
+    orchestrator-uri: ${ORCHESTRATOR_SERVICE_URI:http://localhost:8086}
+    payment-service-uri: ${PAYMENT_SERVICE_URI:http://localhost:8084}
+    # where the customer lands when the merchant gave no return URL
+    default-result-path: /payment-result
+    max-fields: 100
+    max-value-length: 2000
+    retry:
+      enabled: true
+      interval: 30s
+      max-attempts: 8

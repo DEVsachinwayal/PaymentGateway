@@ -95,3 +95,8 @@
 
 ## 2026-10-09 – gateway routes for checkout (branch feature/api-gateway)
 - /api/v1/payments/{id}/checkout -> orchestrator (declared before generic payments route), public GET /checkout/** -> orchestrator, POST /api/v1/webhooks/** marked public (provider-signature authenticated, route comes with webhook-service). Gateway tests 10/10 (note: use `mvn clean test` after editing tests - a stale class once hid a new test).
+
+## 2026-10-09 – webhook-service (branch feature/webhook-service) + common fix (feature/apg-common)
+- apg-common: Spring MVC 4xx protocol errors (415 etc.) are no longer turned into 500 (+test).
+- webhook-service (8087, DB apg_webhook): callback endpoint, hash verification via provider-integration, de-duplication, sanitized storage, orchestrator hand-over with retry/backoff/DEAD, browser 303 redirect, neutral result page. Tests 9/9.
+- Next: gateway routes (/api/v1/webhooks/**, /payment-result), run everything together and do the REAL PayU sandbox payment with the user in a browser.
