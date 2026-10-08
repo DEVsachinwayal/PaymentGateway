@@ -26,5 +26,6 @@
     <module>services/api-gateway</module>
     <module>services/merchant-service</module>
     <module>services/order-service</module>
+    <module>services/payment-service</module>
   </modules>
 </project>

@@ -32,3 +32,11 @@ Allowed webhook events: payment.success, payment.failed, payment.unknown, refund
 | GET | /api/v1/orders/{id} | 404 ORDER_NOT_FOUND for other merchants' orders |
 | GET | /api/v1/orders?page=0&size=20 | newest first, size max 100 |
 Order status: CREATED -> PAID / CANCELLED / EXPIRED (updated by payment flow later).
+
+## Payments (payment-service; API key or dashboard user)
+| Method | Path | Notes |
+|---|---|---|
+| POST | /api/v1/payments | `Idempotency-Key` required. Body {orderId, [paymentMethod UPI/CARD/NETBANKING/WALLET, returnUrl https]}. Amount/currency come from the order; extra fields (status, amount...) => 400 MALFORMED_REQUEST. 201 payment (status CREATED). Errors: 404 ORDER_NOT_FOUND, 409 ORDER_NOT_PAYABLE / PAYMENT_ALREADY_EXISTS, 503 ORDER_SERVICE_UNAVAILABLE |
+| GET | /api/v1/payments/{id} | |
+| GET | /api/v1/payments/{id}/status | state + full history |
+| GET | /api/v1/payments?page&size | |

@@ -1,0 +1,35 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: payment-service
+  datasource:
+    url: ${PAYMENT_DB_URL:jdbc:postgresql://localhost:5433/apg_payment}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  jackson:
+    deserialization:
+      # money safety + never let a client smuggle fields such as "status":"SUCCESS"
+      accept-float-as-int: false
+      fail-on-unknown-properties: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+apg:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN}
+  payment:
+    order-service-uri: ${ORDER_SERVICE_URI:http://localhost:8083}

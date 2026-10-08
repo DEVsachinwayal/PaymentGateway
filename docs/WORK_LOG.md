@@ -57,3 +57,9 @@
 - Added route /api/v1/orders -> order-service (ORDER_SERVICE_URI). Gateway tests 9/9.
 - E2E smoke (auth+merchant+order+gateway): API-key order create 201, replay with same key => `Idempotent-Replayed: true`, missing key => IDEMPOTENCY_KEY_REQUIRED, dashboard user can list, direct call to order-service => 401; DB has 1 order with amount_minor 49900.
 - Next step: M5 Payment on branch `feature/payment-service` (payment_intents, payments, payment_attempts, payment_state_history; central state machine; idempotent create; never trust client-supplied status; calls order-service via internal API to validate order ownership/amount). Frontend (React dashboard) still pending — schedule after M5.
+
+## 2026-10-09 – M5 Payment (branch feature/payment-service)
+- payment-service (8084, DB apg_payment): intents/payments/attempts/history/outbox/idempotency tables; central state machine; idempotent create validated against order-service; one open payment per order; internal transition endpoint.
+- Tests: PaymentStatusTest 3 (full 11x11 matrix vs spec) + PaymentFlowTest 11 = 14/14 (incl. concurrent create => 1 payment, conflicting concurrent transitions => 1 winner, duplicate webhook no-op, timeout->VERIFY_REQUIRED).
+- order-service got `/internal/v1/orders/{id}` (7/7 tests).
+- Next: gateway route /api/v1/payments (branch feature/api-gateway), then M6 Orchestrator + M7 Provider/PayU (needs user's PayU sandbox key/salt at M7).
