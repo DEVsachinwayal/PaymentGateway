@@ -31,3 +31,11 @@ Marker row and business change share one DB transaction (failed attempt leaves n
 Jackson would turn 49.99 into 49 silently. Every money-handling service must set `spring.jackson.deserialization.accept-float-as-int=false`.
 ## D16 – Order currencies allow-listed (INR only for now)
 PayU sandbox is INR; widen via config when a provider supports more.
+## D17 – PROCESSING -> SUCCESS allowed in addition to AUTHORIZED -> CAPTURED -> SUCCESS
+PayU returns a final captured result in one step; forcing fake AUTHORIZED/CAPTURED hops would record states the provider never reported. Providers with auth/capture use the long path.
+## D18 – Transactional outbox for events
+Events are inserted in the same DB transaction as the state change (no lost/phantom events); a publisher to Kafka is built in M12 (poll-the-outbox is the documented, deliberate exception to "no DB polling").
+## D19 – Unknown JSON properties rejected in money services
+`fail-on-unknown-properties=true` in payment-service so clients cannot send status/amount/currency.
+## D20 – Payment pulls order data via order-service internal API (no shared DB)
+Synchronous read at creation; order status is updated from payment events in M12 (until then orders stay CREATED; the one-open-payment unique index prevents double payment).
