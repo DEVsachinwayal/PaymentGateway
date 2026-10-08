@@ -67,7 +67,8 @@ class PaymentFlowTest {
                     body = "{\"error\":{\"code\":\"ORDER_NOT_FOUND\"}}";
                 } else {
                     body = "{\"data\":{\"id\":\"" + id + "\",\"merchantId\":\"" + o[0] + "\",\"amount\":" + o[1]
-                            + ",\"currency\":\"INR\",\"status\":\"" + o[2] + "\"}}";
+                            + ",\"currency\":\"INR\",\"status\":\"" + o[2] + "\",\"description\":\"Test order\","
+                            + "\"customerName\":\"Asha\",\"customerEmail\":\"asha@example.com\",\"customerPhone\":null}}";
                 }
                 byte[] b = body.getBytes(StandardCharsets.UTF_8);
                 ex.getResponseHeaders().add("Content-Type", "application/json");
@@ -297,6 +298,73 @@ class PaymentFlowTest {
         } catch (ApiException e) {
             return e.code();
         }
+    }
+
+    private ResultActions internalGet(String path) throws Exception {
+        return mvc.perform(MockMvcRequestBuilders.get(path).header("X-Internal-Token", TOKEN));
+    }
+
+    private ResultActions beginAttempt(String paymentId, String provider) throws Exception {
+        return mvc.perform(MockMvcRequestBuilders.post("/internal/v1/payments/" + paymentId + "/attempts")
+                .header("X-Internal-Token", TOKEN).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"provider\":\"" + provider + "\"}"));
+    }
+
+    @Test void attemptStartsPendingWithUniqueReferenceAndCustomerSnapshot() throws Exception {
+        UUID m = UUID.randomUUID();
+        String id = createPayment(m, order(m, 4200, "CREATED"));
+        internalGet("/internal/v1/payments/" + id).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.customerEmail").value("asha@example.com"))
+                .andExpect(jsonPath("$.data.description").value("Test order"))
+                .andExpect(jsonPath("$.data.amount").value(4200));
+
+        JsonNode a = read(beginAttempt(id, "payu").andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.attemptNo").value(1)).andExpect(jsonPath("$.data.paymentStatus").value("PENDING")));
+        String ref = a.at("/data/providerReference").asText();
+        assertTrue(ref.matches("^A[0-9a-f]{20}$"), ref);
+        get(m, "/api/v1/payments/" + id + "/status").andExpect(jsonPath("$.data.status").value("PENDING"));
+
+        beginAttempt(id, "payu").andExpect(status().isConflict()).andExpect(jsonPath("$.error.code").value("PAYMENT_NOT_STARTABLE"));
+        beginAttempt(id, "Bad Provider!").andExpect(status().isBadRequest());
+
+        mvc.perform(MockMvcRequestBuilders.patch("/internal/v1/attempts/" + ref).header("X-Internal-Token", TOKEN)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"REDIRECTED\",\"providerPaymentId\":\"mihpay-1\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("REDIRECTED"));
+        internalGet("/internal/v1/attempts/" + ref).andExpect(jsonPath("$.data.providerPaymentId").value("mihpay-1"))
+                .andExpect(jsonPath("$.data.merchantId").value(m.toString()));
+        internalGet("/internal/v1/payments/" + id).andExpect(jsonPath("$.data.providerPaymentId").value("mihpay-1"))
+                .andExpect(jsonPath("$.data.provider").value("payu"));
+        internalGet("/internal/v1/attempts/Anotexisting").andExpect(status().isNotFound());
+    }
+
+    @Test void concurrentCheckoutStartsHaveOneWinner() throws Exception {
+        UUID m = UUID.randomUUID();
+        String id = createPayment(m, order(m, 1000, "CREATED"));
+        ExecutorService pool = Executors.newFixedThreadPool(5);
+        CountDownLatch go = new CountDownLatch(1);
+        List<Future<Integer>> fs = new java.util.ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            fs.add(pool.submit(() -> { go.await(); return beginAttempt(id, "payu").andReturn().getResponse().getStatus(); }));
+        }
+        go.countDown();
+        int ok = 0;
+        for (Future<Integer> f : fs) if (f.get(30, TimeUnit.SECONDS) == 200) ok++;
+        pool.shutdown();
+        assertEquals(1, ok);
+        assertEquals(1, jdbc.queryForObject("select count(*) from payment_attempts where payment_id = ?::uuid", Integer.class, id));
+    }
+
+    @Test void pendingListShowsStuckPaymentsForTheVerificationWorker() throws Exception {
+        UUID m = UUID.randomUUID();
+        String id = createPayment(m, order(m, 1000, "CREATED"));
+        String ref = read(beginAttempt(id, "payu")).at("/data/providerReference").asText();
+        internalTransition(id, "PROCESSING", "ORCHESTRATOR").andExpect(status().isOk());
+        String res = internalGet("/internal/v1/payments/pending?statuses=PROCESSING&olderThanSeconds=0&limit=200")
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertTrue(res.contains(id) && res.contains(ref), "stuck payment should be listed");
+        String fresh = internalGet("/internal/v1/payments/pending?statuses=PROCESSING&olderThanSeconds=3600&limit=200")
+                .andReturn().getResponse().getContentAsString();
+        assertFalse(fresh.contains(id), "recent payments must not be listed yet");
     }
 
     @Test void internalAndAuthRules() throws Exception {

@@ -1,5 +1,7 @@
 package com.apg.payment.domain;
 
+import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,6 +15,7 @@ public final class Repositories {
     public interface PaymentRepository extends JpaRepository<Payment, UUID> {
         Optional<Payment> findByIdAndMerchantId(UUID id, UUID merchantId);
         Page<Payment> findByMerchantId(UUID merchantId, Pageable pageable);
+        List<Payment> findByStatusInAndUpdatedAtBeforeOrderByUpdatedAtAsc(Collection<PaymentStatus> statuses, Instant before, Pageable pageable);
     }
 
     public interface PaymentIntentRepository extends JpaRepository<PaymentIntent, UUID> {}
@@ -22,4 +25,9 @@ public final class Repositories {
     }
 
     public interface OutboxRepository extends JpaRepository<OutboxEvent, UUID> {}
+
+    public interface AttemptRepository extends JpaRepository<PaymentAttempt, UUID> {
+        Optional<PaymentAttempt> findByProviderReference(String providerReference);
+        Optional<PaymentAttempt> findFirstByPaymentIdOrderByAttemptNoDesc(UUID paymentId);
+    }
 }

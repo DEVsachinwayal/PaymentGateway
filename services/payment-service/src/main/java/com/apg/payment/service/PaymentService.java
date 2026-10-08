@@ -42,7 +42,8 @@ public class PaymentService {
         }
         Instant now = clock.instant();
         PaymentIntent intent = intents.save(new PaymentIntent(merchantId, order.id(), order.amount(), order.currency(),
-                r.paymentMethod(), r.returnUrl(), now));
+                r.paymentMethod(), r.returnUrl(), order.description(), order.customerName(), order.customerEmail(),
+                order.customerPhone(), now));
         Payment p = new Payment(intent.getId(), merchantId, order.id(), order.amount(), order.currency(), now);
         try {
             payments.saveAndFlush(p);
