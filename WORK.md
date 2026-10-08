@@ -22,8 +22,8 @@ User communicates in Marathi/English. User asked: build the whole project per sp
 | M1 | Foundation (parent pom, apg-common, docker infra) | DONE |
 | M2 | API Gateway + Auth (JWT, refresh, roles) | DONE |
 | M3 | Merchant (API keys, webhook config) - backend done, dashboard UI pending | DONE (backend) |
-| M4 | Order | NEXT |
-| M5 | Payment (state machine, idempotency) | todo |
+| M4 | Order | DONE |
+| M5 | Payment (state machine, idempotency) | NEXT (branch feature/payment-service) |
 | M6 | Orchestrator | todo |
 | M7 | Provider adapter + PayU sandbox (needs user's PayU key/salt) | todo |
 | M8 | Webhook | todo |

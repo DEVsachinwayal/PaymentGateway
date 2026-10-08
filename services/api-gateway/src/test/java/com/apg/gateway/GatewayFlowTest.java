@@ -98,6 +98,7 @@ class GatewayFlowTest {
         r.add("apg.gateway.jwt-secret", () -> SECRET);
         r.add("apg.gateway.auth-uri", () -> url);
         r.add("apg.gateway.merchant-uri", () -> url);
+        r.add("apg.gateway.order-uri", () -> url);
         r.add("apg.gateway.internal-token", () -> "internal-token-for-tests-123");
         r.add("apg.gateway.rate-limit.replenish-per-second", () -> 1);
         r.add("apg.gateway.rate-limit.burst", () -> 3);
@@ -117,7 +118,6 @@ class GatewayFlowTest {
         RouteLocator protectedTestRoute(RouteLocatorBuilder b, org.springframework.core.env.Environment env) {
             return b.routes()
                     .route("protected-test", r -> r.path("/api/v1/protected-test/**").uri(env.getProperty("test.backend.url")))
-                    .route("orders-test", r -> r.path("/api/v1/orders/**").uri(env.getProperty("test.backend.url")))
                     .build();
         }
     }

@@ -52,3 +52,8 @@
 ## 2026-10-09 – M4 Order (branch feature/order-service)
 - order-service (8083, DB apg_order): orders/customers/order_items/idempotency_keys; create is idempotent via apg-common; strict money validation; tenant isolation. Tests OrderFlowTest 6/6 (incl. 6 concurrent duplicates => 1 order, failed requests leave no idempotency marker, 49.99 rejected).
 - Next: gateway route for /api/v1/orders on branch feature/api-gateway, then frontend step, then M5 Payment (branch feature/payment-service).
+
+## 2026-10-09 – gateway route for orders (branch feature/api-gateway) => M4 DONE
+- Added route /api/v1/orders -> order-service (ORDER_SERVICE_URI). Gateway tests 9/9.
+- E2E smoke (auth+merchant+order+gateway): API-key order create 201, replay with same key => `Idempotent-Replayed: true`, missing key => IDEMPOTENCY_KEY_REQUIRED, dashboard user can list, direct call to order-service => 401; DB has 1 order with amount_minor 49900.
+- Next step: M5 Payment on branch `feature/payment-service` (payment_intents, payments, payment_attempts, payment_state_history; central state machine; idempotent create; never trust client-supplied status; calls order-service via internal API to validate order ownership/amount). Frontend (React dashboard) still pending — schedule after M5.
