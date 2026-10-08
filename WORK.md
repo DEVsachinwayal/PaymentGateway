@@ -1,4 +1,4 @@
-# APG – Instructions for any AI session (read first)
+# APG – WORK.md: instructions for any AI session (read first; renamed from CLAUDE.md)
 
 Project: Autonomous Payment Gateway. Spec = `docs/MASTER_SPEC_EXTRACT.txt` (extracted from the .docx; authoritative).
 User communicates in Marathi/English. User asked: build the whole project per spec, keep notes so a new chat can continue, commit after each task.
@@ -14,3 +14,25 @@ User communicates in Marathi/English. User asked: build the whole project per sp
 - Maven: `D:\Tools\apache-maven-3.9.16`. Node 22. Docker CLI present; daemon may need to be started (Docker Desktop).
 - Stack decision: Spring Boot 3.5.16, Java release 21 (runs on 25), multi-module Maven. See DECISIONS.md.
 - Never commit secrets; `.env` is git-ignored.
+
+## Milestones (17 total: M0..M16) – update status after each commit
+| # | Milestone | Status |
+|---|---|---|
+| M0 | Repo + docs skeleton | DONE |
+| M1 | Foundation (parent pom, apg-common, docker infra) | DONE |
+| M2 | API Gateway + Auth (JWT, refresh, roles) | IN PROGRESS |
+| M3 | Merchant (API keys, webhook config) | todo |
+| M4 | Order | todo |
+| M5 | Payment (state machine, idempotency) | todo |
+| M6 | Orchestrator | todo |
+| M7 | Provider adapter + PayU sandbox (needs user's PayU key/salt) | todo |
+| M8 | Webhook | todo |
+| M9 | Refund | todo |
+| M10 | Ledger | todo |
+| M11 | Settlement + Reconciliation | todo |
+| M12 | Kafka/Redis/Notifications/DLQ | todo |
+| M13 | Security + Observability | todo |
+| M14 | Performance (JMeter) | todo |
+| M15 | OCI + CI/CD (needs user's OCI account) | todo |
+| M16 | Release readiness | todo |
+Frontend (React merchant dashboard) is built incrementally alongside M3..M11.
