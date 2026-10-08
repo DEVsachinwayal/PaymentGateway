@@ -48,3 +48,7 @@
 
 ## 2026-10-09 – apg-common: IdempotencyService (branch feature/apg-common)
 - Added IdempotencyService + auto-config (active when a JdbcTemplate exists). Tests incl. 8-thread concurrent duplicate => action runs once. common 10/10; auth 8/8 and merchant 8/8 still green.
+
+## 2026-10-09 – M4 Order (branch feature/order-service)
+- order-service (8083, DB apg_order): orders/customers/order_items/idempotency_keys; create is idempotent via apg-common; strict money validation; tenant isolation. Tests OrderFlowTest 6/6 (incl. 6 concurrent duplicates => 1 order, failed requests leave no idempotency marker, 49.99 rejected).
+- Next: gateway route for /api/v1/orders on branch feature/api-gateway, then frontend step, then M5 Payment (branch feature/payment-service).
