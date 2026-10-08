@@ -152,7 +152,10 @@ class OrderFlowTest {
                 .andExpect(status().isUnauthorized());
         mvc.perform(MockMvcRequestBuilders.get("/internal/v1/orders/" + id).param("merchantId", a.toString())
                 .header("X-Internal-Token", TOKEN)).andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.amount").value(50000)).andExpect(jsonPath("$.data.status").value("CREATED"));
+                .andExpect(jsonPath("$.data.amount").value(50000)).andExpect(jsonPath("$.data.status").value("CREATED"))
+                .andExpect(jsonPath("$.data.customerEmail").value("asha@example.com"))
+                .andExpect(jsonPath("$.data.customerName").value("Asha"))
+                .andExpect(jsonPath("$.data.description").value("Two books"));
         mvc.perform(MockMvcRequestBuilders.get("/internal/v1/orders/" + id).param("merchantId", b.toString())
                 .header("X-Internal-Token", TOKEN)).andExpect(status().isNotFound());
     }
