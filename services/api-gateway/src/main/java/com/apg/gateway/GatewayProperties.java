@@ -13,6 +13,7 @@ public record GatewayProperties(
         String orderUri,
         String paymentUri,
         String orchestratorUri,
+        String webhookUri,
         List<String> corsAllowedOrigins,
         long maxRequestBytes,
         RateLimit rateLimit) {

@@ -120,7 +120,7 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
         return (HttpMethod.POST.equals(m) && PUBLIC_POST.contains(path))
                 || path.startsWith("/actuator/health")
                 // customer-facing: hosted checkout redirect page (signed token) ...
-                || (HttpMethod.GET.equals(m) && path.startsWith("/checkout/"))
+                || (HttpMethod.GET.equals(m) && (path.startsWith("/checkout/") || path.equals("/payment-result")))
                 // ... and provider callbacks, which are authenticated by the provider's signature, not by us (M8)
                 || (HttpMethod.POST.equals(m) && path.startsWith("/api/v1/webhooks/"));
     }
