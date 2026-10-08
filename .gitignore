@@ -11,3 +11,4 @@ dist/
 *.p12
 *.jks
 .run/
+frontend/.vite/

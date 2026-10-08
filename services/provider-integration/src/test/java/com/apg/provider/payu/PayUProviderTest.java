@@ -145,6 +145,25 @@ class PayUProviderTest {
                 "unclear refund result must be UNKNOWN (verify, don't retry blindly)");
     }
 
+    @Test void refundStatusIsSuccessOnlyWhenPayUSaysSo() {
+        RefundStatusResponse queued = provider.getRefundStatus(new RefundStatusRequest("77001", "RF0001abc"));
+        assertEquals(RefundOutcome.PROCESSING, queued.outcome(), "queued is not success");
+
+        payu.scenarios.put("refundstatus:77002", "{\"status\":1,\"msg\":\"ok\",\"transaction_details\":{\"403993715\":{\"77002\":"
+                + "{\"request_id\":\"77002\",\"token\":\"RF0002abc\",\"status\":\"success\"}}}}");
+        assertEquals(RefundOutcome.SUCCESS, provider.getRefundStatus(new RefundStatusRequest("77002", "RF0002abc")).outcome());
+
+        payu.scenarios.put("refundstatus:77003", "{\"status\":1,\"msg\":\"ok\",\"transaction_details\":{\"x\":{\"request_id\":\"77003\",\"status\":\"failed\"}}}");
+        assertEquals(RefundOutcome.FAILED, provider.getRefundStatus(new RefundStatusRequest("77003", "RF0003abc")).outcome());
+
+        payu.scenarios.put("refundstatus:77004", "{\"status\":1,\"msg\":\"ok\",\"transaction_details\":{}}");
+        assertEquals(RefundOutcome.PROCESSING, provider.getRefundStatus(new RefundStatusRequest("77004", "RF0004abc")).outcome(),
+                "unknown shape must never be treated as success");
+
+        payu.scenarios.put("refundstatus:77005", "<html>boom</html>");
+        assertThrows(ProviderException.class, () -> provider.getRefundStatus(new RefundStatusRequest("77005", "RF0005abc")));
+    }
+
     // ------------------------------------------------------------------ callback verification
     private Map<String, String> callback(String hash) {
         Map<String, String> f = new LinkedHashMap<>();

@@ -37,6 +37,14 @@ public final class ProviderModels {
 
     public record RefundResponse(RefundStatus status, String providerRequestId, String message) {}
 
+    /** PROCESSING = queued/unknown at the provider; SUCCESS/FAILED only when the provider says so explicitly. */
+    public enum RefundOutcome { SUCCESS, FAILED, PROCESSING }
+
+    public record RefundStatusRequest(@NotBlank @Size(max = 100) String providerRequestId,
+                                      @NotBlank @Pattern(regexp = "^[A-Za-z0-9]{6,23}$") String refundReference) {}
+
+    public record RefundStatusResponse(RefundOutcome outcome, String rawStatus) {}
+
     public record ProviderWebhookRequest(@NotNull Map<String, String> fields) {}
 
     /** {@code authentic} only proves the provider produced the message; callers must still confirm via status API. */
