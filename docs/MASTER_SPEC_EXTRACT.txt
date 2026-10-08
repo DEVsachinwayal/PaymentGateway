@@ -1,0 +1,744 @@
+AUTONOMOUS PAYMENT GATEWAY
+Complete Master Implementation & Build Documentation
+APG • From Repository Initialization to Production-Readiness
+Document property | Value
+Project | Autonomous Payment Gateway (APG)
+Primary stack | Java 21/25+ compatible • Spring Boot • PostgreSQL • Redis • Kafka • React
+Payment integration | Provider abstraction; PayU sandbox first
+Architecture | Microservices-oriented production architecture
+Deployment target | Oracle Cloud Infrastructure (OCI)
+Purpose | Single source of truth for implementation by Claude/AI coding agent
+Status | Master build blueprint; production credentials/compliance remain external dependencies
+Heading 1: 0. How This Document Must Be Used
+This document is the authoritative implementation contract for APG. A coding agent must not treat it as a high-level idea document. It must use the phases, service contracts, data ownership, security rules, acceptance criteria and verification gates to build the system incrementally.
+Inspect the repository before changing anything.
+Never delete or overwrite working code without understanding it.
+Implement one phase at a time and keep the repository buildable.
+Do not claim a feature is complete until code, migration, tests and runtime verification exist.
+Never fake a successful payment. Sandbox success must come from the real sandbox provider flow.
+Never hard-code secrets, API keys, salts, passwords, JWT secrets or encryption keys.
+Do not store raw card number, CVV, PIN or equivalent sensitive authentication data.
+Use provider adapters so merchants integrate only with APG APIs.
+When an external credential, KYC, PCI, banking or provider approval is required, document it as an external dependency.
+After every meaningful task update docs/WORK_LOG.md, docs/CHANGELOG.md and docs/TODO.md.
+Before moving to the next phase, run the phase acceptance checklist.
+Heading 1: 1. Product Definition
+Heading 2: 1.1 Goal
+APG is a merchant-facing payment orchestration platform. Merchants create orders and payment requests through APG APIs. APG authenticates the merchant, creates and tracks payment attempts, routes the attempt to an authorized payment provider, verifies the provider result, receives and verifies webhooks, maintains an auditable ledger, handles refunds, settlement records and reconciliation, and exposes operational visibility.
+Heading 2: 1.2 What APG is not
+APG is not itself a UPI network, card network, bank or acquiring institution.
+APG must not pretend to directly authorize cards or UPI unless an authorized processing/acquiring integration actually exists.
+Production payment acceptance requires provider onboarding, merchant/KYC/compliance approval and applicable security/regulatory requirements.
+Heading 2: 1.3 Core user types
+Role | Responsibilities
+Merchant Admin | Create/manage merchant account, API keys, webhooks, users and configuration.
+Merchant Developer | Create orders/payments, receive webhooks, query status and refunds.
+APG Operations | Monitor payments, provider health, reconciliation exceptions and incidents.
+APG Finance | Review ledger, settlements, fees and reconciliation.
+System Admin | Manage platform configuration and security controls.
+Heading 1: 2. Target Architecture
+Heading 2: 2.1 Production microservices
+# | Service | Primary responsibility | Owns data
+1 | API Gateway | Public API entry, routing, rate limits, correlation ID | No business DB
+2 | Auth Service | Users, credentials, JWT/refresh sessions, roles | auth DB/schema
+3 | Merchant Service | Merchants, merchant users, API keys, webhook config | merchant DB/schema
+4 | Order Service | Orders, customers, amount/currency/order state | order DB/schema
+5 | Payment Service | Payment intents, payment attempts, state machine | payment DB/schema
+6 | Payment Orchestrator | Routing, provider selection, attempt coordination | Minimal orchestration state
+7 | Provider Integration | Provider adapters, request/response normalization | provider config/audit
+8 | Webhook Service | Receive, authenticate, deduplicate and process webhooks | webhook DB/schema
+9 | Refund Service | Refund lifecycle and provider refund calls | refund DB/schema
+10 | Ledger Service | Double-entry financial records and immutable entries | ledger DB/schema
+11 | Settlement & Reconciliation | Settlement batches, provider files/API data, exceptions | settlement DB/schema
+12 | Notification Service | Merchant notifications/email operational events | notification DB/schema
+Heading 2: 2.2 Infrastructure components
+PostgreSQL
+Redis
+Kafka
+Kafka DLQ topics
+Object storage for controlled reconciliation artifacts if needed
+OCI Load Balancer
+Nginx/API Gateway edge where appropriate
+Prometheus
+Grafana
+OpenTelemetry
+Secrets management
+CI/CD via GitHub Actions
+Heading 2: 2.3 Logical flow
+Merchant App
+  -> API Gateway
+  -> Auth/Merchant validation
+  -> Order Service
+  -> Payment Service
+  -> Payment Orchestrator
+  -> Provider Integration
+  -> PayU / other authorized provider
+  -> Bank / Network
+  -> Provider callback/webhook
+  -> Webhook Service
+  -> Payment Service + Ledger + Notification
+  -> Settlement & Reconciliation
+Heading 1: 3. Repository and Documentation Contract
+Heading 2: 3.1 Required repository layout
+apg/
+├── services/
+│   ├── api-gateway/
+│   ├── auth-service/
+│   ├── merchant-service/
+│   ├── order-service/
+│   ├── payment-service/
+│   ├── payment-orchestrator/
+│   ├── provider-integration/
+│   ├── webhook-service/
+│   ├── refund-service/
+│   ├── ledger-service/
+│   ├── settlement-service/
+│   └── notification-service/
+├── frontend/
+├── infrastructure/
+│   ├── docker/
+│   ├── kafka/
+│   ├── postgres/
+│   ├── redis/
+│   └── observability/
+├── docs/
+│   ├── README.md
+│   ├── REQUIREMENTS.md
+│   ├── ARCHITECTURE.md
+│   ├── SERVICES.md
+│   ├── DATABASE.md
+│   ├── API_REFERENCE.md
+│   ├── EVENTS.md
+│   ├── PAYMENT_LIFECYCLE.md
+│   ├── PROVIDERS.md
+│   ├── PAYU_INTEGRATION.md
+│   ├── WEBHOOKS.md
+│   ├── REFUNDS.md
+│   ├── LEDGER.md
+│   ├── SETTLEMENTS.md
+│   ├── RECONCILIATION.md
+│   ├── SECURITY.md
+│   ├── TESTING.md
+│   ├── PERFORMANCE.md
+│   ├── DEPLOYMENT.md
+│   ├── ORACLE_CLOUD.md
+│   ├── CI_CD.md
+│   ├── CONFIGURATION.md
+│   ├── TROUBLESHOOTING.md
+│   ├── DECISIONS.md
+│   ├── WORK_LOG.md
+│   ├── CHANGELOG.md
+│   └── TODO.md
+├── docker-compose.yml
+├── .env.example
+└── README.md
+Heading 2: 3.2 Documentation update rules
+WORK_LOG.md: date, phase, task, files changed, tests run, result, blockers and next step.
+CHANGELOG.md: user-visible or architecture-visible changes.
+TODO.md: pending implementation and external dependencies.
+DECISIONS.md: decision, alternatives considered, reason and consequences.
+Every service must have a short service README.
+API and event contracts must be versioned and documented.
+Heading 1: 4. Development Strategy and Exact Build Method
+Heading 2: 4.1 Golden development loop
+Read the relevant phase and acceptance criteria.
+Inspect current repository state and existing code.
+Identify dependencies and external prerequisites.
+Create/update the service skeleton and configuration.
+Create database migration before relying on new persistence.
+Implement domain model and business rules.
+Implement API/event contracts.
+Implement validation and error handling.
+Implement security and authorization.
+Implement unit and integration tests.
+Start required infrastructure locally.
+Run build and automated tests.
+Run the service and execute smoke tests.
+Verify logs, metrics, database state and API response.
+Update all required documentation.
+Commit with a meaningful message.
+Only then begin the next task.
+Heading 2: 4.2 AI coding-agent rules
+Do not generate all services blindly in one step.
+Do not create duplicate business logic across services.
+Do not bypass service boundaries just because direct database access is easier.
+Do not expose provider credentials to the frontend or merchant.
+Do not use database polling when an event-driven flow is required without documenting why.
+Do not retry unknown payment outcomes blindly.
+For money values use integer minor units or a precise decimal strategy; never binary floating point for financial calculations.
+Use UTC timestamps in storage and explicit timezone conversion at presentation boundaries.
+Use correlation IDs and idempotency keys throughout payment flows.
+Heading 1: 5. Data Ownership and Core Database Model
+Heading 2: 5.1 Core entities
+Service | Tables / aggregates
+Auth | users, roles, user_roles, refresh_sessions, login_audit
+Merchant | merchants, merchant_users, api_keys, webhook_endpoints, merchant_settings
+Order | orders, customers, order_items
+Payment | payment_intents, payments, payment_attempts, payment_state_history
+Provider | provider_configs, provider_attempts, provider_audit
+Webhook | webhook_events, webhook_delivery_attempts
+Refund | refunds, refund_attempts
+Ledger | ledger_accounts, ledger_transactions, ledger_entries
+Settlement | settlements, settlement_items, reconciliation_records, reconciliation_exceptions
+Notification | notification_templates, notification_jobs, notification_attempts
+Heading 2: 5.2 Database rules
+Each service owns its persistence; other services access data through APIs/events.
+Use Flyway migrations.
+Use foreign keys within a service database where appropriate.
+Use unique constraints for merchant API key identifiers, idempotency keys and provider event IDs.
+Index merchant_id, order_id, payment_id, provider_payment_id, status and created_at according to query patterns.
+Use optimistic locking/version columns where concurrent state transitions are possible.
+Never delete financial ledger entries; corrections are compensating entries.
+Heading 1: 6. API Contract
+Heading 2: 6.1 Merchant-facing endpoints
+Method | Endpoint | Purpose
+POST | /api/v1/auth/register | Register platform user/merchant workflow
+POST | /api/v1/auth/login | Authenticate
+POST | /api/v1/auth/refresh | Refresh token
+POST | /api/v1/merchants | Create merchant
+GET | /api/v1/merchants/me | Current merchant
+POST | /api/v1/api-keys | Create API key
+GET | /api/v1/api-keys | List keys
+POST | /api/v1/api-keys/{id}/rotate | Rotate key
+DELETE | /api/v1/api-keys/{id} | Revoke key
+POST | /api/v1/orders | Create order
+GET | /api/v1/orders/{id} | Get order
+POST | /api/v1/payments | Create payment
+GET | /api/v1/payments/{id} | Get payment
+GET | /api/v1/payments/{id}/status | Get verified status
+POST | /api/v1/refunds | Create refund
+GET | /api/v1/refunds/{id} | Get refund
+POST | /api/v1/webhooks/{provider} | Provider callback endpoint
+GET | /actuator/health | Health
+Heading 2: 6.2 Idempotency
+All money-changing POST operations must support Idempotency-Key. The server stores the request fingerprint and final response or an in-progress marker. A repeated key with the same fingerprint returns the original result. A repeated key with a different request body is rejected.
+Heading 2: 6.3 API response conventions
+{
+  "success": true,
+  "data": {...},
+  "error": null,
+  "requestId": "req_...",
+  "timestamp": "2026-..."
+}
+Error responses must contain a stable machine-readable code, human-readable message, requestId and validation details when applicable.
+Heading 1: 7. Payment State Machine
+CREATED
+  -> PENDING
+  -> PROCESSING
+  -> AUTHORIZED
+  -> CAPTURED
+  -> SUCCESS
+
+Failure branches:
+PENDING/PROCESSING -> FAILED
+AUTHORIZED -> FAILED only where provider semantics allow
+SUCCESS -> REFUND_PENDING -> REFUNDED / PARTIALLY_REFUNDED
+
+Unknown provider outcome:
+PROCESSING/UNKNOWN -> VERIFY_REQUIRED
+VERIFY_REQUIRED -> SUCCESS / FAILED / UNKNOWN (manual or scheduled resolution)
+State transitions must be validated centrally.
+Every transition creates a state-history record.
+Provider callback must not be trusted blindly; verify signature and, where necessary, query provider status.
+Timeout does not automatically mean payment failed.
+Heading 1: 8. Service-by-Service Implementation Blueprint
+Heading 2: API Gateway
+Public entry point; route requests; authentication propagation; rate limiting; correlation ID; request size limits; CORS; API versioning.
+Data: Routes only. No payment business logic.
+Implementation: Spring Cloud Gateway or equivalent.
+Required completion: controller/API or event handlers → domain service → persistence → validation → security → tests → observability → documentation → acceptance test.
+Heading 2: Auth Service
+Registration, login, password hashing, JWT access tokens, refresh tokens, roles, session revocation.
+Data: users, roles, refresh_sessions
+Implementation: Argon2/BCrypt; secure token rotation.
+Required completion: controller/API or event handlers → domain service → persistence → validation → security → tests → observability → documentation → acceptance test.
+Heading 2: Merchant Service
+Merchant profile, API key lifecycle, webhook configuration, settings.
+Data: merchants, merchant_users, api_keys, webhook_endpoints
+Implementation: Hash API secrets at rest; show secret only once.
+Required completion: controller/API or event handlers → domain service → persistence → validation → security → tests → observability → documentation → acceptance test.
+Heading 2: Order Service
+Create and retrieve orders; amount/currency/customer information; order state.
+Data: orders, customers, order_items
+Implementation: Validate amount/currency and merchant ownership.
+Required completion: controller/API or event handlers → domain service → persistence → validation → security → tests → observability → documentation → acceptance test.
+Heading 2: Payment Service
+Payment intent lifecycle, attempts, status, state transitions, idempotency integration.
+Data: payment_intents, payments, payment_attempts, state_history
+Implementation: Never accept client-supplied success status.
+Required completion: controller/API or event handlers → domain service → persistence → validation → security → tests → observability → documentation → acceptance test.
+Heading 2: Payment Orchestrator
+Choose provider, create attempt, handle timeout/unknown, initiate verification, failover only when safe.
+Data: Minimal routing/audit state
+Implementation: Provider selection must be configurable and auditable.
+Required completion: controller/API or event handlers → domain service → persistence → validation → security → tests → observability → documentation → acceptance test.
+Heading 2: Provider Integration
+Normalize external provider APIs into APG contracts.
+Data: provider configs/audit
+Implementation: Adapter interface; no provider code in core payment domain.
+Required completion: controller/API or event handlers → domain service → persistence → validation → security → tests → observability → documentation → acceptance test.
+Heading 2: Webhook Service
+Receive provider callbacks, verify signatures, deduplicate, persist raw safe metadata, publish event.
+Data: webhook_events, delivery_attempts
+Implementation: Replay-safe and idempotent.
+Required completion: controller/API or event handlers → domain service → persistence → validation → security → tests → observability → documentation → acceptance test.
+Heading 2: Refund Service
+Full/partial refunds, validation, provider refund, refund state.
+Data: refunds, refund_attempts
+Implementation: Prevent over-refund and duplicate refunds.
+Required completion: controller/API or event handlers → domain service → persistence → validation → security → tests → observability → documentation → acceptance test.
+Heading 2: Ledger Service
+Immutable double-entry accounting for captured payments, fees, refunds, settlements.
+Data: ledger_accounts, ledger_transactions, ledger_entries
+Implementation: Debits must equal credits.
+Required completion: controller/API or event handlers → domain service → persistence → validation → security → tests → observability → documentation → acceptance test.
+Heading 2: Settlement & Reconciliation
+Track provider settlement batches, map transactions, compare expected vs actual, create exceptions.
+Data: settlements, settlement_items, reconciliation_records, exceptions
+Implementation: No silent mismatch.
+Required completion: controller/API or event handlers → domain service → persistence → validation → security → tests → observability → documentation → acceptance test.
+Heading 2: Notification Service
+Merchant webhook delivery and operational notifications.
+Data: notification_jobs, attempts, templates
+Implementation: Retry with backoff and DLQ.
+Required completion: controller/API or event handlers → domain service → persistence → validation → security → tests → observability → documentation → acceptance test.
+Heading 1: 9. Payment Provider Abstraction
+public interface PaymentProvider {
+    PaymentResponse createPayment(PaymentRequest request);
+    PaymentStatusResponse getPaymentStatus(String providerPaymentId);
+    RefundResponse refund(RefundRequest request);
+    ProviderWebhookResult verifyWebhook(ProviderWebhookRequest request);
+    ProviderHealth health();
+}
+Core payment service depends on the interface, not PayU classes.
+Provider-specific DTOs stay inside the provider integration boundary.
+Normalize provider statuses into APG statuses.
+Persist provider reference IDs and request/response audit metadata without leaking secrets.
+Provider timeouts must produce an explicit verification workflow.
+Heading 1: 10. PayU Sandbox Implementation
+Heading 2: 10.1 Sequence
+Create/configure PayU sandbox credentials outside source control.
+Add environment variables to .env locally and secret storage in deployment.
+Implement PayU adapter behind PaymentProvider.
+Implement request signing exactly according to the current PayU integration documentation.
+Create checkout/payment initiation flow.
+Redirect or invoke the supported sandbox mechanism.
+Receive provider response/callback.
+Verify signature/hash and provider status.
+Update APG payment state idempotently.
+Publish payment events.
+Create ledger entries only for the appropriate financial state.
+Test success, failure, duplicate callback, timeout and unknown outcome.
+Heading 2: 10.2 Production dependency
+Production activation is an external dependency. The implementation must leave a clear checklist for merchant onboarding, KYC, production keys, allowed domains/URLs, webhook URLs, settlement configuration, applicable compliance/security requirements and provider approval.
+Heading 1: 11. UPI / Card / Net Banking / Wallets
+Method | APG responsibility | Sensitive-data rule
+UPI | Create provider payment and track provider result | Do not store UPI PIN
+Cards | Use hosted/tokenized provider collection where supported | Do not store PAN/CVV/PIN
+Net Banking | Redirect/provider-hosted flow | Do not collect bank credentials
+Wallets | Provider-supported wallet selection/redirect | Do not store wallet credentials
+APG exposes a normalized payment-method model while the provider adapter handles provider-specific method codes and checkout requirements.
+Heading 1: 12. Webhooks
+Receive request over HTTPS.
+Validate request size and content type.
+Verify provider signature/hash.
+Generate provider-event fingerprint.
+Check duplicate event ID/fingerprint.
+Persist event safely.
+Return provider-appropriate acknowledgement.
+Publish internal event.
+Payment Service consumes event and validates current state.
+If financial status is uncertain, call provider status API.
+Update state exactly once.
+Trigger ledger/refund/notification workflows.
+Record processing result and retries.
+Webhook endpoint must be replay-safe.
+Never treat an unsigned callback as authoritative.
+Do not expose raw secrets in logs.
+Heading 1: 13. Refunds
+Validate merchant ownership and refundable amount.
+Use an idempotency key.
+Prevent cumulative refunds above captured amount.
+Create refund record before provider call.
+Call provider through adapter.
+Handle pending/unknown result through verification.
+Update refund and payment state.
+Create compensating ledger entries.
+Notify merchant.
+Heading 1: 14. Double-Entry Ledger
+The ledger is an accounting subsystem, not a payment status table. Every financial transaction must balance.
+Example conceptual capture:
+Debit  : Merchant Receivable / Provider Receivable
+Credit : Merchant Payable
+
+Example fee:
+Debit  : Merchant Payable
+Credit : APG Fee Revenue
+
+Example refund:
+Debit  : Refund / Reversal account
+Credit : Merchant Payable / Provider Receivable
+Use immutable ledger transactions and entries.
+Store currency and minor-unit amounts.
+Require total debit == total credit per transaction.
+Use compensating transactions for corrections.
+Reconciliation must be possible from ledger plus provider data.
+Heading 1: 15. Settlement
+Represent provider settlement batches.
+Map settlement items to APG payments/ledger transactions.
+Calculate gross, fees, refunds, adjustments and net settlement.
+Track settlement status and dates.
+Never mark settlement successful without provider evidence.
+Persist unmatched items as reconciliation exceptions.
+Heading 1: 16. Reconciliation
+Provider records
+      ↓
+Normalize
+      ↓
+Match by provider reference / merchant reference / amount / date
+      ↓
+Matched ───────────────→ reconciled
+      │
+      ├─ amount mismatch → exception
+      ├─ missing APG     → exception
+      ├─ missing provider→ exception
+      └─ status mismatch → exception
+
+Reconciliation must be rerunnable.
+Do not modify historical evidence to hide a mismatch.
+Exceptions need status, owner, reason, evidence and resolution notes.
+Heading 1: 17. Kafka Event Contract
+Topic | Producer | Consumers
+payment.created | Payment | Orchestrator, analytics/audit
+payment.processing | Payment/Orchestrator | Notification, monitoring
+payment.success | Payment | Ledger, Notification, Settlement
+payment.failed | Payment | Notification, monitoring
+payment.unknown | Orchestrator | Verification worker, Operations
+refund.created | Refund | Provider integration, Notification
+refund.success | Refund | Ledger, Notification
+webhook.received | Webhook | Payment/Refund/Settlement
+settlement.created | Settlement | Ledger/Notification
+reconciliation.exception | Reconciliation | Operations/Notification
+Heading 2: 17.1 Event rules
+Events contain eventId, eventType, version, occurredAt, correlationId, aggregateId, merchantId and payload.
+Consumers must be idempotent.
+Use retry topics and DLQ.
+Do not put secrets or sensitive card data in events.
+Schema changes must be backward compatible or versioned.
+Heading 1: 18. Redis
+Idempotency response/state cache.
+Rate limiting.
+Short-lived provider health state.
+Distributed locks only where truly required and with bounded TTL.
+Never use Redis as the sole source of truth for payments or ledger.
+Heading 1: 19. Security
+Area | Requirement
+Transport | TLS/HTTPS everywhere externally; secure internal communication where required.
+Auth | JWT access tokens + rotating refresh tokens; role-based authorization.
+Merchant API | Secret API keys, rotation and revocation.
+Secrets | OCI secret manager/environment injection; never source control.
+Card data | Hosted/tokenized provider flow; no raw PAN/CVV/PIN storage.
+Webhooks | Signature/hash verification + replay protection.
+Input | Bean validation, allowlists, size limits, secure parsing.
+Abuse | Rate limits, lockouts, audit logs.
+Logging | No credentials, tokens, CVV, full card data or sensitive payloads.
+Database | Least privilege, encrypted backups, restricted network access.
+Dependencies | Dependency scanning and regular patching.
+Heading 1: 20. Testing Strategy
+Heading 2: 20.1 Required test layers
+Unit tests for domain/business rules.
+Repository/database integration tests.
+Controller/API tests.
+Provider adapter contract tests.
+Webhook signature and replay tests.
+Idempotency tests.
+Payment state transition tests.
+Refund over-limit tests.
+Ledger balancing tests.
+Settlement/reconciliation matching tests.
+Kafka consumer retry/DLQ tests.
+End-to-end sandbox payment tests.
+Security tests.
+JMeter performance tests.
+Heading 2: 20.2 Mandatory failure scenarios
+Provider timeout
+Duplicate payment request
+Duplicate webhook
+Webhook arrives before browser redirect result
+Provider says unknown
+Network failure after provider accepted payment
+Service restart during processing
+Kafka duplicate event
+Refund duplicate request
+Partial refund
+Database transaction rollback
+Settlement mismatch
+Heading 1: 21. Observability
+Structured JSON logs.
+Correlation ID and trace ID.
+Metrics for payment success/failure, latency, provider errors, webhook lag, refund latency, reconciliation exceptions and Kafka lag.
+Distributed traces with OpenTelemetry.
+Prometheus scraping and Grafana dashboards.
+Alerts for elevated failure rate, provider outage, webhook backlog, DLQ growth and reconciliation mismatch.
+Heading 1: 22. Docker and Local Environment
+Heading 2: 22.1 Local infrastructure
+docker compose up -d postgres redis kafka
+# then build/run services
+./mvnw test
+./mvnw spring-boot:run
+Provide docker-compose for local infrastructure.
+Each service must have health checks.
+Use separate configuration profiles for local, test and production.
+Provide .env.example with variable names only.
+Heading 1: 23. Oracle Cloud Deployment
+Internet
+   ↓
+OCI Load Balancer
+   ↓
+Reverse proxy / API edge
+   ↓
+APG services on OCI compute/container platform
+   ↓
+PostgreSQL + Redis + Kafka
+   ↓
+External payment provider
+
+Provision network/security lists with least privilege.
+Expose only required public ports.
+Use HTTPS certificates.
+Store secrets outside Git.
+Configure backups and restore testing.
+Configure centralized logs and monitoring.
+Deploy using immutable images.
+Use health checks and rolling/controlled deployment.
+Document every OCI resource and monthly cost assumption.
+Heading 1: 24. CI/CD
+Git push
+  -> lint/build
+  -> unit tests
+  -> integration tests
+  -> dependency/security checks
+  -> Docker image build
+  -> image scan
+  -> push registry
+  -> deployment
+  -> smoke tests
+  -> rollback if failed
+Never deploy with failing mandatory tests.
+Use environment-specific secrets.
+Tag releases.
+Keep rollback instructions in DEPLOYMENT.md.
+Heading 1: 25. Frontend / Merchant Dashboard
+Merchant login.
+Dashboard summary: payments, success rate, refunds, settlement status.
+API key creation/rotation/revocation.
+Orders and payment detail.
+Payment timeline.
+Refund creation/status.
+Webhook endpoint configuration and delivery history.
+Settlement and reconciliation views.
+Role-based access.
+No provider secret exposure.
+Heading 2: 25.1 Checkout
+The checkout must use provider-supported secure collection/redirect/tokenization. The browser must never send raw card credentials to APG backend unless the exact authorized architecture explicitly supports it and the required compliance controls are implemented.
+Heading 1: 26. Production Readiness Gate
+Gate | Pass condition
+Build | All services build successfully.
+Tests | Mandatory automated test suite passes.
+Security | No critical known vulnerabilities or exposed secrets.
+Payments | Sandbox success/failure/timeout/duplicate scenarios verified.
+Webhooks | Signature and replay protection verified.
+Money | Ledger balances and refund limits verified.
+Reconciliation | Mismatch scenarios create visible exceptions.
+Observability | Logs, metrics, traces and alerts work.
+Deployment | OCI deployment reproducible from CI/CD.
+Recovery | Backup and restore procedure tested.
+Operations | Runbook and troubleshooting docs complete.
+External readiness | Provider production onboarding/KYC/compliance items documented and approved where applicable.
+Heading 1: 27. Milestone Execution Plan
+Milestone | Name | Definition of done
+M0 | Repo + documentation contract | Repo inspected; docs skeleton; coding-agent rules
+M1 | Foundation | Parent build, shared conventions, local infrastructure, health, logging
+M2 | API Gateway + Auth | Gateway routing, login, JWT, refresh, roles
+M3 | Merchant | Merchant lifecycle, API keys, webhook config
+M4 | Order | Order/customer APIs and validation
+M5 | Payment | Payment intents, attempts, state machine, idempotency
+M6 | Orchestration | Provider selection, timeout/unknown verification
+M7 | Provider + PayU | Adapter and sandbox end-to-end payment
+M8 | Webhook | Signature, deduplication, replay-safe processing
+M9 | Refund | Full/partial refund lifecycle
+M10 | Ledger | Double-entry financial records
+M11 | Settlement/Reconciliation | Provider settlement mapping and exceptions
+M12 | Kafka/Redis/Notifications | Event-driven reliability and notifications
+M13 | Security/Observability | Hardening, metrics, traces, alerts
+M14 | Performance | JMeter/load tests and tuning
+M15 | OCI/CI-CD | Production-like deployment and rollback
+M16 | Release readiness | Final audit, runbooks and external onboarding checklist
+Heading 1: 28. Definition of Done for Every Feature
+Requirement is documented.
+Design/decision is documented where non-obvious.
+Code is implemented.
+Database migration is implemented if required.
+API/event contract is documented.
+Validation and authorization are implemented.
+Unit tests exist.
+Integration tests exist where applicable.
+Failure scenarios are tested.
+Logs/metrics are appropriate.
+No secret or sensitive payment data is exposed.
+Local smoke test passes.
+Documentation updated.
+WORK_LOG/CHANGELOG/TODO updated.
+Git commit created.
+Heading 1: 29. External Dependencies Checklist
+PayU sandbox account/credentials.
+PayU production onboarding and credentials.
+Merchant/KYC/business verification as required by provider and applicable rules.
+Production webhook/redirect URLs.
+OCI account and billing configuration.
+Domain and TLS certificate.
+Email/SMS provider if used.
+Applicable PCI/security/compliance assessment before handling production card flows.
+Any required banking/acquiring/payment-partner agreements.
+Heading 1: 30. Troubleshooting Contract
+Problem | Required investigation order
+Payment stuck | Payment state history → provider attempt → provider status API → webhook → logs/traces → reconciliation
+Duplicate payment | Idempotency record → order/payment uniqueness → provider reference → webhook dedup
+Duplicate webhook | provider event ID/fingerprint → webhook table → processing history
+Refund mismatch | Refund state → provider refund reference → ledger entries → settlement
+Ledger imbalance | transaction entries → DB transaction boundary → compensating entry; never edit history
+Kafka message failure | consumer logs → retry topic → DLQ → root cause → replay after fix
+Provider outage | health metrics → provider status → circuit/routing policy → unknown payments verification
+OCI deployment failure | image → config/secrets → network → health check → logs → rollback
+Heading 1: 31. Required Documentation Content After Build
+README must explain local setup in simple language.
+ARCHITECTURE must show service boundaries and flows.
+SERVICES must explain every service.
+DATABASE must document ownership, schema and migrations.
+API_REFERENCE must document request/response/auth/idempotency.
+EVENTS must document Kafka topics and schemas.
+PAYMENT_LIFECYCLE must document every state.
+PAYU_INTEGRATION must document sandbox configuration and provider-specific behavior.
+SECURITY must document controls and forbidden data.
+TESTING must document how to run all test layers.
+ORACLE_CLOUD must document infrastructure and deployment.
+TROUBLESHOOTING must contain operational runbooks.
+WORK_LOG must tell a simple chronological story of what the agent actually did.
+Heading 1: 32. Master Prompt for Claude / Coding Agent
+Paste the following instruction together with this document when asking an AI coding agent to build APG:
+You are the principal engineer responsible for implementing Autonomous Payment Gateway (APG).
+
+Treat the supplied Master Implementation Documentation as the authoritative specification.
+
+FIRST:
+1. Inspect the entire repository.
+2. Detect existing code, build system, branches and configuration.
+3. Do not destroy working code.
+4. Create/update the docs/ directory and tracking files.
+5. Produce a short implementation-status report.
+6. Start only with the current milestone.
+
+FOR EVERY TASK:
+- Explain the intended change briefly.
+- Implement production-quality code.
+- Follow the service boundaries and data ownership rules.
+- Add migrations.
+- Add validation, security and error handling.
+- Add unit/integration tests.
+- Run the relevant build and tests.
+- Start required local infrastructure.
+- Run a smoke test.
+- Fix failures before continuing.
+- Update docs/WORK_LOG.md.
+- Update docs/CHANGELOG.md.
+- Update docs/TODO.md.
+- Update docs/DECISIONS.md when a design decision is made.
+- Commit the completed work.
+
+PAYMENT RULES:
+- Never hard-code or fake payment success.
+- Never store raw card PAN/CVV/PIN.
+- Never expose provider credentials to merchants or frontend.
+- Use PaymentProvider abstraction.
+- PayU sandbox is the first real provider integration.
+- Unknown provider outcomes must be verified; do not blindly mark failed or retry money-changing operations.
+- All money-changing APIs require idempotency.
+- Webhooks must be signature-verified and replay-safe.
+- Ledger entries are immutable and double-entry balanced.
+
+ARCHITECTURE:
+Implement the documented microservices:
+API Gateway, Auth, Merchant, Order, Payment, Payment Orchestrator,
+Provider Integration, Webhook, Refund, Ledger, Settlement/Reconciliation,
+Notification.
+
+Do not collapse these boundaries merely for convenience without documenting the decision.
+
+IMPORTANT:
+If an external credential, KYC, provider approval, banking relationship, PCI/compliance requirement or cloud resource is needed, mark it as an EXTERNAL DEPENDENCY. Never pretend that it has been completed.
+
+DO NOT:
+- skip tests,
+- skip migrations,
+- skip documentation,
+- invent provider behavior,
+- commit secrets,
+- use mock success in place of sandbox integration,
+- move to the next milestone while the current milestone is broken.
+
+DONE means:
+code + migration + tests + runtime verification + documentation + clean git state for the milestone.
+
+Begin with repository inspection and M0/M1 only. Do not jump ahead.
+Heading 1: 33. Final Build Sequence Summary
+Repository
+  ↓
+Documentation + conventions
+  ↓
+Infrastructure
+  ↓
+API Gateway
+  ↓
+Auth
+  ↓
+Merchant + API Keys
+  ↓
+Orders
+  ↓
+Payments + State Machine + Idempotency
+  ↓
+Payment Orchestrator
+  ↓
+Provider Integration
+  ↓
+PayU Sandbox
+  ↓
+Webhooks
+  ↓
+Refunds
+  ↓
+Ledger
+  ↓
+Settlement + Reconciliation
+  ↓
+Kafka + Redis + DLQ
+  ↓
+Notifications
+  ↓
+Security + Observability
+  ↓
+JMeter + Failure Testing
+  ↓
+Docker
+  ↓
+Oracle Cloud
+  ↓
+CI/CD
+  ↓
+Production Readiness
+  ↓
+External Provider Onboarding
+  ↓
+Controlled Production Transaction
+Heading 1: 34. Final Acceptance Statement
+APG is considered implementation-complete only when the documented services, APIs, persistence, events, payment-provider sandbox flow, webhook verification, refunds, ledger, settlement/reconciliation, security, tests, observability, deployment and operational documentation have been implemented and verified. Production payment processing remains conditional on external provider onboarding, credentials, applicable compliance/security requirements and successful controlled production verification.

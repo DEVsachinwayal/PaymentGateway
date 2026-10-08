@@ -1,0 +1,12 @@
+target/
+.env
+*.log
+.idea/
+.vscode/
+*.iml
+node_modules/
+dist/
+*.pem
+*.key
+*.p12
+*.jks
