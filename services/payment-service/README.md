@@ -7,3 +7,8 @@ Owns payment_intents, payments, payment_attempts, payment_state_history, outbox_
 - `POST /internal/v1/payments/{id}/transition` for orchestrator/webhook/verification (not routed by gateway).
 - Outbox events (payment.created/processing/success/failed/unknown) are written transactionally; Kafka publishing arrives in M12.
 Env: POSTGRES_USER, POSTGRES_PASSWORD, INTERNAL_SERVICE_TOKEN, ORDER_SERVICE_URI.
+
+## Internal APIs for orchestrator/webhook/verification (token protected, not routed by the gateway)
+- `GET /internal/v1/payments/{id}` (incl. customer/product snapshot), `POST .../transition`
+- `POST /internal/v1/payments/{id}/attempts {provider}`: starts attempt N with a unique `providerReference` (sent to the provider as txnid) and moves CREATED -> PENDING atomically (only one concurrent starter wins).
+- `GET|PATCH /internal/v1/attempts/{reference}`; `GET /internal/v1/payments/pending?statuses=&olderThanSeconds=&limit=` (verification worker work-list).

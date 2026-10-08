@@ -79,3 +79,7 @@
 ## 2026-10-09 – PayU credentials OK
 - User replaced key/salt (Test Mode). One verify_payment call => `status 0 / 0 out of 1 Transactions Fetched / Not Found` = hash accepted. Blocker removed.
 - Plan (each on its own branch, order): payment-service internal APIs + attempts (feature/payment-service) -> provider-integration with PayU adapter (feature/provider-integration) -> payment-orchestrator (feature/payment-orchestrator) -> webhook-service (feature/webhook-service) -> real sandbox end-to-end with user completing a test payment in the browser.
+
+## 2026-10-09 – payment-service attempts + order internal view (branches feature/payment-service, feature/order-service)
+- order-service internal view now has description + customer; payment-service snapshots them on the intent (V2 migration), adds attempts API (begin = attempt + CREATED->PENDING atomically), lookup by provider reference, pending work-list. Tests payment 17/17, order 7/7.
+- Next: provider-integration service (branch feature/provider-integration).
