@@ -17,4 +17,3 @@ M2 Gateway+Auth, M3 Merchant, M4 Order, M5 Payment, M6 Orchestration, M7 Provide
 - [ ] Ops API to activate merchants (SANDBOX -> ACTIVE) after KYC (EXTERNAL DEPENDENCY)
 - [ ] Re-validate webhook URL resolved IP at delivery time (M12)
 - [ ] Short Redis cache for API key verification (M12/M14)
-- [ ] BLOCKER (user): valid PayU TEST key + salt (current pair gets "Invalid Hash."). Needed for M7 sandbox verification.

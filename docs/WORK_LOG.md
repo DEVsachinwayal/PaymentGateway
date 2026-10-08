@@ -75,3 +75,7 @@
 - DO NOT hammer PayU: a second host answered 429 "Invalid requests limit reached". Retry only after the user confirms new values; use at most one verify call per attempt.
 - Action for user: re-copy Key + Salt (32 bit) from PayU dashboard with TEST MODE toggle ON (Developer > API Details/Keys); or raise a ticket at help.payu.in if keys are not visible.
 - Meanwhile: build independent milestones (M10 Ledger, M11 Settlement/Reconciliation, M12 Kafka/Redis/Notifications) and PayU adapter code with hash unit tests that need no live credentials.
+
+## 2026-10-09 – PayU credentials OK
+- User replaced key/salt (Test Mode). One verify_payment call => `status 0 / 0 out of 1 Transactions Fetched / Not Found` = hash accepted. Blocker removed.
+- Plan (each on its own branch, order): payment-service internal APIs + attempts (feature/payment-service) -> provider-integration with PayU adapter (feature/provider-integration) -> payment-orchestrator (feature/payment-orchestrator) -> webhook-service (feature/webhook-service) -> real sandbox end-to-end with user completing a test payment in the browser.

@@ -18,4 +18,4 @@ command=cancel_refund_transaction, var1=mihpayid, var2=unique refund token (<=23
 Net banking user/pass payu/payu OTP 123456; test VPAs anything@payu or 999999999@payu (UPI collect simulator https://pgsim01.payu.in/UPI-test-transaction/confirm/<txnid>); MasterCard 5123456789012346 CVV 123 OTP 123456 any future expiry; PayTM 7777777777 OTP 888888.
 
 ## Status 2026-10-09
-Credentials in .env rejected with "Invalid Hash." – see WORK_LOG. Not yet verified against the live sandbox.
+Credentials VERIFIED 2026-10-09: verify_payment on test.payu.in returned a signed-valid "Not Found" for an unknown txn (first pair was rejected with Invalid Hash; user re-copied from Test Mode).
