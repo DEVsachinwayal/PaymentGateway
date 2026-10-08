@@ -22,5 +22,6 @@
 
   <modules>
     <module>libs/apg-common</module>
+    <module>services/auth-service</module>
   </modules>
 </project>

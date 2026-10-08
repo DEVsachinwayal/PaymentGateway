@@ -21,3 +21,10 @@
 - Docker Hub pulls of `apache/kafka:3.9.0` failed (network EOF/DNS). Switched to locally cached `apache/kafka-native:4.1.2`; healthcheck changed to `nc -z localhost 9092` (native image has no kafka bin scripts). Decision D4.
 - Local .env (git-ignored): POSTGRES_USER=apg, dummy local passwords.
 - Next step: M2 – services/auth-service then services/api-gateway.
+
+## 2026-10-09 – M2 part 1: auth-service
+- Built `services/auth-service`: Flyway V1 (users, roles, user_roles, refresh_sessions, login_audit), BCrypt(12), JWT, refresh rotation + reuse detection, lockout, audit; security config denies everything except auth endpoints/health.
+- Tests: AuthFlowTest 8/8 pass on real Postgres (Testcontainers). Smoke test on compose DB: register+login OK, rows present in apg_auth.
+- Problem found: native Postgres on host :5432 hijacked connections -> compose Postgres moved to :5433 (D5).
+- Run command used: `set -a; . ./.env; set +a; java -jar services/auth-service/target/auth-service-0.1.0-SNAPSHOT.jar` (.env has JWT_SECRET appended locally).
+- Next step: M2 part 2 – `services/api-gateway` (Spring Cloud Gateway: route /api/v1/auth/** to :8081, JWT validation for protected routes, correlation ID, rate limit, CORS, body size limit).
