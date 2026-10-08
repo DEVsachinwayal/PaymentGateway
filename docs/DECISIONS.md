@@ -13,3 +13,7 @@ Host already runs a native Postgres on 5432 (services connected to it by mistake
 Alternative: RS256 + JWKS. HMAC is simpler for gateway local validation; revisit in M13 (hardening) to move to asymmetric keys.
 ## D7 – Integration tests named *Test using Testcontainers
 Run by plain `mvn test`; Testcontainers Ryuk disabled via env on this machine (image not pullable).
+## D8 – Gateway does not depend on apg-common
+apg-common is servlet-based, gateway is WebFlux. Error envelope is duplicated minimally in `ErrorResponses`.
+## D9 – Rate limiting fails open if Redis is down
+Spring Cloud Gateway RedisRateLimiter default. Redis is not source of truth (spec 18); revisit in M13.

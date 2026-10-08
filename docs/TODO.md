@@ -8,3 +8,7 @@ M2 Gateway+Auth, M3 Merchant, M4 Order, M5 Payment, M6 Orchestration, M7 Provide
 - Email/SMS provider (if used), PCI/compliance assessment, banking/acquirer agreements
 ## Open items
 - [ ] Structured JSON logging config (add with first service, logback + MDC correlationId)
+- [ ] Admin API to grant APG_OPERATIONS/APG_FINANCE/SYSTEM_ADMIN roles (auth-service)
+- [ ] Rate limiter key from X-Forwarded-For behind OCI LB (M15)
+- [ ] Move JWT to asymmetric keys / JWKS (M13)
+- [ ] Gateway: structured JSON logs (M13)

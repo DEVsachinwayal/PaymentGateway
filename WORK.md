@@ -20,8 +20,8 @@ User communicates in Marathi/English. User asked: build the whole project per sp
 |---|---|---|
 | M0 | Repo + docs skeleton | DONE |
 | M1 | Foundation (parent pom, apg-common, docker infra) | DONE |
-| M2 | API Gateway + Auth (JWT, refresh, roles) | IN PROGRESS |
-| M3 | Merchant (API keys, webhook config) | todo |
+| M2 | API Gateway + Auth (JWT, refresh, roles) | DONE |
+| M3 | Merchant (API keys, webhook config) | NEXT |
 | M4 | Order | todo |
 | M5 | Payment (state machine, idempotency) | todo |
 | M6 | Orchestrator | todo |

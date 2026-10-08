@@ -28,3 +28,10 @@
 - Problem found: native Postgres on host :5432 hijacked connections -> compose Postgres moved to :5433 (D5).
 - Run command used: `set -a; . ./.env; set +a; java -jar services/auth-service/target/auth-service-0.1.0-SNAPSHOT.jar` (.env has JWT_SECRET appended locally).
 - Next step: M2 part 2 – `services/api-gateway` (Spring Cloud Gateway: route /api/v1/auth/** to :8081, JWT validation for protected routes, correlation ID, rate limit, CORS, body size limit).
+
+## 2026-10-09 – M2 part 2: api-gateway  => M2 DONE
+- Built `services/api-gateway` (Spring Cloud 2025.0.3): JWT global filter, header anti-spoofing, correlation ID, Redis rate limit, request-size limit, CORS, secure headers, route `/api/v1/auth/**` -> auth-service.
+- Tests: GatewayFlowTest 7/7 (stub backend + real Redis container). E2E smoke with both services + compose DB/Redis: register/login/refresh/reuse-detection all correct through :8080.
+- Run: `set -a; . ./.env; set +a` then `java -jar` auth-service (8081) and api-gateway (8080). Kill with `taskkill //F //IM java.exe`.
+- Known gaps (tracked in TODO): admin API for granting privileged roles; X-Forwarded-For key for rate limiter behind OCI LB; asymmetric JWT keys.
+- Next step: M3 Merchant – `services/merchant-service` (merchants, merchant_users, api_keys hashed + shown once, rotate/revoke, webhook_endpoints), gateway route + API-key authentication filter, then start `frontend/` login + API keys page.

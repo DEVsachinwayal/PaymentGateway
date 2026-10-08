@@ -1,0 +1,33 @@
+server:
+  port: 8080
+  max-http-request-header-size: 16KB
+
+spring:
+  application:
+    name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+apg:
+  gateway:
+    # No default: must be injected, same value as auth-service. Never commit it.
+    jwt-secret: ${JWT_SECRET}
+    auth-uri: ${AUTH_SERVICE_URI:http://localhost:8081}
+    cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+    max-request-bytes: 262144
+    rate-limit:
+      replenish-per-second: 10
+      burst: 20
