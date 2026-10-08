@@ -25,3 +25,5 @@ Secrets are 256-bit random, so a fast keyed hash is safe and keeps per-request v
 Correct revocation semantics first; add short Redis cache in M12/M14 if latency demands (TODO).
 ## D13 – Webhook signing secret is encrypted (AES-GCM), not hashed
 It must be reusable to sign outbound webhooks (M12).
+## D14 – IdempotencyService in apg-common, table per service
+Marker row and business change share one DB transaction (failed attempt leaves no marker; concurrent duplicate blocks on PK then replays). Each service creates `idempotency_keys` in its own migration (DDL in `IdempotencyService.TABLE_DDL`). Redis is not used as the source of truth (spec 18).

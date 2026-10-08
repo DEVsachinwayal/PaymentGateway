@@ -5,7 +5,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
@@ -15,7 +14,12 @@ import org.springframework.web.bind.annotation.RestController;
 @SpringBootTest(classes = {CorrelationWebTest.App.class, CorrelationWebTest.Ctl.class})
 @AutoConfigureMockMvc
 class CorrelationWebTest {
-    @SpringBootApplication static class App {}
+    @org.springframework.context.annotation.Configuration
+    @org.springframework.boot.autoconfigure.EnableAutoConfiguration(exclude = {
+            org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration.class,
+            org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration.class,
+            org.springframework.boot.autoconfigure.jdbc.JdbcTemplateAutoConfiguration.class})
+    static class App {}
     @RestController static class Ctl {
         @GetMapping("/boom") String boom() { throw new IllegalStateException("secret internals"); }
     }
