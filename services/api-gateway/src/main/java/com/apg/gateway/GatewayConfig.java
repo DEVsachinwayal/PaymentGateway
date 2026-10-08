@@ -65,6 +65,12 @@ public class GatewayConfig {
                         .filters(f -> f
                                 .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver)))
                         .uri(props.orchestratorUri()))
+                // provider callbacks + neutral customer result page (public; callbacks are authenticated by provider signature)
+                .route("webhook-service", r -> r.path("/api/v1/webhooks/**", "/payment-result")
+                        .filters(f -> f
+                                .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))
+                                .setRequestSize(props.maxRequestBytes()))
+                        .uri(props.webhookUri()))
                 .route("payment-service", r -> r.path("/api/v1/payments/**", "/api/v1/payments")
                         .filters(f -> f
                                 .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))

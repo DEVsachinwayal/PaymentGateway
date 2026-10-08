@@ -101,6 +101,7 @@ class GatewayFlowTest {
         r.add("apg.gateway.order-uri", () -> url);
         r.add("apg.gateway.payment-uri", () -> url);
         r.add("apg.gateway.orchestrator-uri", () -> url);
+        r.add("apg.gateway.webhook-uri", () -> url);
         r.add("apg.gateway.internal-token", () -> "internal-token-for-tests-123");
         r.add("apg.gateway.rate-limit.replenish-per-second", () -> 1);
         r.add("apg.gateway.rate-limit.burst", () -> 3);
@@ -199,6 +200,16 @@ class GatewayFlowTest {
         web.post().uri("/api/v1/payments/abc/checkout").exchange().expectStatus().isUnauthorized();
         web.post().uri("/api/v1/payments/abc/checkout").header("X-Api-Key", "sk_test_good.secret").exchange()
                 .expectStatus().isOk().expectBody().jsonPath("$.merchant").isEqualTo("merch-api");
+    }
+
+    @Test @Order(2)
+    void providerCallbacksAndResultPageArePublic() {
+        web.post().uri("/api/v1/webhooks/payu").header("X-User-Id", "attacker").bodyValue("txnid=A1")
+                .exchange().expectStatus().isOk().expectBody()
+                .jsonPath("$.path").isEqualTo("/api/v1/webhooks/payu").jsonPath("$.userId").isEqualTo("")
+                .jsonPath("$.internal").isEqualTo("internal-token-for-tests-123");
+        web.get().uri("/payment-result?status=SUCCESS").exchange().expectStatus().isOk();
+        web.get().uri("/api/v1/webhooks/payu").exchange().expectStatus().isUnauthorized();   // only POST is public
     }
 
     @Test @Order(3)
