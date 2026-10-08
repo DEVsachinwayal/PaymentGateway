@@ -1,0 +1,34 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: order-service
+  datasource:
+    url: ${ORDER_DB_URL:jdbc:postgresql://localhost:5433/apg_order}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+apg:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN}
+  order:
+    allowed-currencies: INR
+    max-amount-minor: 100000000000   # 1,000,000,000.00 in minor units
+
+# Money safety: never silently truncate 49.99 into 49 minor units.
+spring.jackson.deserialization.accept-float-as-int: false

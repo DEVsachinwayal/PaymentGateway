@@ -24,3 +24,11 @@ Roles: write ops = MERCHANT_ADMIN; read ops = MERCHANT_ADMIN or MERCHANT_DEVELOP
 | POST/GET/DELETE | /api/v1/webhook-endpoints[/{id}] | {url (https, SSRF-guarded), events[]}; signingSecret returned once |
 Merchant API authentication: `Authorization: Bearer sk_test_...` or `X-Api-Key`; allowed paths: /api/v1/orders, /payments, /refunds.
 Allowed webhook events: payment.success, payment.failed, payment.unknown, refund.success, refund.failed, settlement.created.
+
+## Orders (order-service; API key or dashboard user)
+| Method | Path | Notes |
+|---|---|---|
+| POST | /api/v1/orders | Header `Idempotency-Key` required. Body: amount (long, minor units, >0), currency (INR), [merchantOrderRef, description, customer{name,email,phone}, items[{name,quantity,unitAmount}] (sum must equal amount), metadata{<=20 string pairs}]. 201 order. Errors: 400 VALIDATION_FAILED/CURRENCY_NOT_SUPPORTED/AMOUNT_MISMATCH/AMOUNT_TOO_LARGE/INVALID_METADATA/IDEMPOTENCY_KEY_REQUIRED, 409 DUPLICATE_ORDER_REF/IDEMPOTENCY_IN_PROGRESS, 422 IDEMPOTENCY_KEY_REUSED |
+| GET | /api/v1/orders/{id} | 404 ORDER_NOT_FOUND for other merchants' orders |
+| GET | /api/v1/orders?page=0&size=20 | newest first, size max 100 |
+Order status: CREATED -> PAID / CANCELLED / EXPIRED (updated by payment flow later).

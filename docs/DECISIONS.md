@@ -27,3 +27,7 @@ Correct revocation semantics first; add short Redis cache in M12/M14 if latency 
 It must be reusable to sign outbound webhooks (M12).
 ## D14 – IdempotencyService in apg-common, table per service
 Marker row and business change share one DB transaction (failed attempt leaves no marker; concurrent duplicate blocks on PK then replays). Each service creates `idempotency_keys` in its own migration (DDL in `IdempotencyService.TABLE_DDL`). Redis is not used as the source of truth (spec 18).
+## D15 – Reject float amounts (accept-float-as-int=false)
+Jackson would turn 49.99 into 49 silently. Every money-handling service must set `spring.jackson.deserialization.accept-float-as-int=false`.
+## D16 – Order currencies allow-listed (INR only for now)
+PayU sandbox is INR; widen via config when a provider supports more.
