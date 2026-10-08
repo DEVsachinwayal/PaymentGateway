@@ -39,3 +39,9 @@ Events are inserted in the same DB transaction as the state change (no lost/phan
 `fail-on-unknown-properties=true` in payment-service so clients cannot send status/amount/currency.
 ## D20 – Payment pulls order data via order-service internal API (no shared DB)
 Synchronous read at creation; order status is updated from payment events in M12 (until then orders stay CREATED; the one-open-payment unique index prevents double payment).
+## D21 – Provider calls return UNKNOWN on trouble; only explicit provider answers can fail a payment
+Timeouts, 429, malformed bodies => ProviderException => HTTP 502 => orchestrator marks VERIFY_REQUIRED. FAILED needs `failure`/`failed`/`usercancelled` from PayU.
+## D22 – PayU "success" requires unmappedstatus=captured
+`success` with `auth` (authorised only) is PENDING until captured.
+## D23 – Test PayU is a fake server that validates hashes + one opt-in live test
+Unit tests never contact PayU (it rate-limits bad callers); the live test is opt-in.

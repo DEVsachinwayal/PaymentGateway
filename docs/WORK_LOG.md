@@ -83,3 +83,8 @@
 ## 2026-10-09 – payment-service attempts + order internal view (branches feature/payment-service, feature/order-service)
 - order-service internal view now has description + customer; payment-service snapshots them on the intent (V2 migration), adds attempts API (begin = attempt + CREATED->PENDING atomically), lookup by provider reference, pending work-list. Tests payment 17/17, order 7/7.
 - Next: provider-integration service (branch feature/provider-integration).
+
+## 2026-10-09 – provider-integration with PayU adapter (branch feature/provider-integration)
+- New service provider-integration (8085, DB apg_provider): PaymentProvider port, PayU adapter (checkout hash, verify_payment, refund, callback hash verification, circuit breaker, sanitized call log).
+- Tests 22/22 offline (hash vectors from openssl, FakePayU validating hashes, tampered-callback matrix, timeout/429/HTML/circuit, audit tables contain no salt/hash) + opt-in live sandbox test PASSED once: PayU test.payu.in accepted our Java-computed signature (NOT_FOUND for unknown txn).
+- Next: payment-orchestrator (feature/payment-orchestrator): POST /api/v1/payments/{id}/checkout, provider selection, hosted redirect page, verification worker; then webhook-service.
