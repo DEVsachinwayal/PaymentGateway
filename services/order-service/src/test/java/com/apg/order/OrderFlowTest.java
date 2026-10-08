@@ -145,6 +145,18 @@ class OrderFlowTest {
                 "failed requests must not leave idempotency markers");
     }
 
+    @Test void internalLookupIsTokenProtectedAndMerchantScoped() throws Exception {
+        UUID a = UUID.randomUUID(), b = UUID.randomUUID();
+        String id = read(create(a, "k-" + UUID.randomUUID(), order("R-" + UUID.randomUUID()))).at("/data/id").asText();
+        mvc.perform(MockMvcRequestBuilders.get("/internal/v1/orders/" + id).param("merchantId", a.toString()))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(MockMvcRequestBuilders.get("/internal/v1/orders/" + id).param("merchantId", a.toString())
+                .header("X-Internal-Token", TOKEN)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.amount").value(50000)).andExpect(jsonPath("$.data.status").value("CREATED"));
+        mvc.perform(MockMvcRequestBuilders.get("/internal/v1/orders/" + id).param("merchantId", b.toString())
+                .header("X-Internal-Token", TOKEN)).andExpect(status().isNotFound());
+    }
+
     @Test void authorizationRules() throws Exception {
         UUID m = UUID.randomUUID();
         mvc.perform(MockMvcRequestBuilders.get("/api/v1/orders")).andExpect(status().isUnauthorized());
