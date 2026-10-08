@@ -8,3 +8,4 @@
 - M3: merchant-service, API-key auth at gateway, internal trust token.
 - Adopted per-service branch workflow (see WORK.md).
 - M4: order-service, orders route.
+- M5: payment-service (state machine, history, outbox), payments route.

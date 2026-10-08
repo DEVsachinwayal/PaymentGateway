@@ -53,6 +53,12 @@ public class GatewayConfig {
                                 .setRequestSize(props.maxRequestBytes())
                                 .secureHeaders())
                         .uri(props.orderUri()))
+                .route("payment-service", r -> r.path("/api/v1/payments/**", "/api/v1/payments")
+                        .filters(f -> f
+                                .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))
+                                .setRequestSize(props.maxRequestBytes())
+                                .secureHeaders())
+                        .uri(props.paymentUri()))
                 .build();
     }
 
