@@ -2,10 +2,17 @@
 # Starts the whole APG stack locally (Docker infra must be up: `docker compose up -d`).
 # Usage: scripts/dev-start.sh [--build]   |   stop everything: scripts/dev-stop.sh
 set -e
+mkdir -p .run
 cd "$(dirname "$0")/.."
 export JAVA_HOME="${JAVA_HOME_OVERRIDE:-C:/Program Files/Java/jdk-25.0.4.1}"
 export PATH="/d/Tools/apache-maven-3.9.16/bin:$PATH"
 [ "$1" = "--build" ] || [ ! -f services/api-gateway/target/api-gateway-0.1.0-SNAPSHOT.jar ] && mvn -q -B package -DskipTests
+# Sanity check: a fat jar that lacks apg-common's auto-configuration starts half-broken. This can happen if an IDE
+# touches target/ during `mvn clean package`. Fix: rm -rf the affected service's target dir and run `mvn -q package -DskipTests`.
+for s in auth-service merchant-service order-service payment-service provider-integration payment-orchestrator webhook-service; do
+  unzip -p services/$s/target/$s-0.1.0-SNAPSHOT.jar BOOT-INF/lib/apg-common-0.1.0-SNAPSHOT.jar > .run/common-check.jar 2>/dev/null; n=$(unzip -l .run/common-check.jar 2>/dev/null | grep -ci autoconfiguration.imports || true)
+  if [ "$n" != "1" ]; then echo "ERROR: $s jar lacks apg-common auto-configuration; rebuild it (see comment in scripts/dev-start.sh)"; exit 2; fi
+done
 set -a; . ./.env; set +a
 export PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-http://localhost:8080}"
 mkdir -p .run

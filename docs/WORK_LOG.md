@@ -100,3 +100,7 @@
 - apg-common: Spring MVC 4xx protocol errors (415 etc.) are no longer turned into 500 (+test).
 - webhook-service (8087, DB apg_webhook): callback endpoint, hash verification via provider-integration, de-duplication, sanitized storage, orchestrator hand-over with retry/backoff/DEAD, browser 303 redirect, neutral result page. Tests 9/9.
 - Next: gateway routes (/api/v1/webhooks/**, /payment-result), run everything together and do the REAL PayU sandbox payment with the user in a browser.
+
+## 2026-10-09 – end of chat 1: full stack up, real PayU payment prepared
+- All 8 services run together (scripts/dev-start.sh). Created order (INR 100.00) -> payment -> checkout link; payment is PROCESSING (page rendered, form to test.payu.in/_payment with valid fields). User still has to complete the payment in a browser; result not yet observed.
+- See WORK.md "CURRENT STATE" and "NEXT STEPS" for exact resume instructions.
