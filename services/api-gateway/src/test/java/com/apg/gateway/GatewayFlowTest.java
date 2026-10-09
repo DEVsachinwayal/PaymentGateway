@@ -235,6 +235,20 @@ class GatewayFlowTest {
     }
 
     @Test @Order(2)
+    void apiResponsesCarrySecurityHeadersAndAreNeverCached() {
+        String bearer = "Bearer " + token("u-headers", List.of("MERCHANT_ADMIN"), Instant.now().plusSeconds(60), KEY);
+        web.get().uri("/api/v1/orders/abc").header("Authorization", bearer).exchange().expectStatus().isOk()
+                .expectHeader().valueEquals("Cache-Control", "no-store")
+                .expectHeader().valueEquals("Pragma", "no-cache")
+                .expectHeader().valueEquals("X-Content-Type-Options", "nosniff")
+                .expectHeader().exists("X-Frame-Options")
+                .expectHeader().exists("Referrer-Policy")
+                .expectHeader().exists("Strict-Transport-Security");
+        // errors produced by the gateway itself are not cacheable either
+        web.get().uri("/api/v1/orders/abc").exchange().expectStatus().isUnauthorized().expectHeader().valueEquals("Cache-Control", "no-store");
+    }
+
+    @Test @Order(2)
     void checkoutPageIsPublicButCheckoutApiIsNot() {
         web.get().uri("/checkout/some-token").exchange().expectStatus().isOk().expectBody()
                 .jsonPath("$.path").isEqualTo("/checkout/some-token").jsonPath("$.internal").isEqualTo("internal-token-for-tests-123");
