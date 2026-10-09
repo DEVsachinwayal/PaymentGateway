@@ -16,9 +16,11 @@ import Ledger from './pages/Ledger'
 import Settlements from './pages/Settlements'
 import Deliveries from './pages/Deliveries'
 import Activity from './pages/Activity'
+import NewPayment from './pages/NewPayment'
 
 const NAV: [string, string, string][] = [
   ['/', '🏠', 'Overview'],
+  ['/new-payment', '➕', 'Collect payment'],
   ['/payments', '💳', 'Payments'],
   ['/orders', '🧾', 'Orders'],
   ['/refunds', '↩️', 'Refunds'],
@@ -74,6 +76,7 @@ export default function App() {
         )}
         <Routes>
           <Route path="/" element={<Overview />} />
+          <Route path="/new-payment" element={<NewPayment />} />
           <Route path="/payments" element={<Payments />} />
           <Route path="/payments/:id" element={<PaymentDetail />} />
           <Route path="/orders" element={<Orders />} />
