@@ -27,8 +27,11 @@ management:
 
 apg:
   auth:
-    # No default: JWT_SECRET must be injected (min 32 bytes). Never commit it.
-    jwt-secret: ${JWT_SECRET}
+    # Access tokens are signed RS256 when JWT_PRIVATE_KEY (base64 PKCS#8 RSA key, >= 2048 bit) is set: only auth-service can mint
+    # tokens, the gateway verifies with the public key. Without it HS256 with JWT_SECRET (>= 32 bytes) is used (dev fallback).
+    # No defaults for secrets: inject them, never commit them.
+    jwt-secret: ${JWT_SECRET:}
+    jwt-private-key: ${JWT_PRIVATE_KEY:}
     access-token-ttl: 15m
     refresh-token-ttl: 7d
     max-failed-attempts: 5

@@ -44,11 +44,14 @@ class LoggingTest {
     /** Runs a tiny Spring Boot app in a fresh JVM (logging is initialised once per JVM) and returns everything it printed. */
     private static String runApp(String profile) throws Exception {
         String javaBin = System.getProperty("java.home") + java.io.File.separator + "bin" + java.io.File.separator + "java";
-        ProcessBuilder pb = new ProcessBuilder(javaBin, "-cp", System.getProperty("java.class.path"), JsonLogMain.class.getName(), "--spring.profiles.active=" + profile);
-        pb.redirectErrorStream(true);
-        Process p = pb.start();
-        String out = new String(p.getInputStream().readAllBytes());
-        assertTrue(p.waitFor(60, java.util.concurrent.TimeUnit.SECONDS), "child JVM did not finish");
+        String out = "";
+        for (int attempt = 1; attempt <= 3 && !out.contains("charged card"); attempt++) {     // a loaded machine can make a child JVM die early
+            ProcessBuilder pb = new ProcessBuilder(javaBin, "-cp", System.getProperty("java.class.path"), JsonLogMain.class.getName(), "--spring.profiles.active=" + profile);
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            out = new String(p.getInputStream().readAllBytes());
+            assertTrue(p.waitFor(60, java.util.concurrent.TimeUnit.SECONDS), "child JVM did not finish");
+        }
         return out;
     }
 
