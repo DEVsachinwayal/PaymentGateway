@@ -74,8 +74,11 @@ public class PaymentService {
     public PageView<PaymentView> list(UUID merchantId, int page, int size) {
         var p = payments.findByMerchantId(merchantId,
                 PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100), Sort.by(Sort.Direction.DESC, "createdAt")));
+        // one batch query for the intents of the whole page instead of one per payment
+        var byId = intents.findAllById(p.getContent().stream().map(Payment::getIntentId).distinct().toList()).stream()
+                .collect(java.util.stream.Collectors.toMap(PaymentIntent::getId, i -> i));
         return new PageView<>(p.getContent().stream()
-                .map(x -> view(x, intents.findById(x.getIntentId()).orElseThrow())).toList(),
+                .map(x -> view(x, java.util.Optional.ofNullable(byId.get(x.getIntentId())).orElseThrow())).toList(),
                 p.getNumber(), p.getSize(), p.getTotalElements());
     }
 

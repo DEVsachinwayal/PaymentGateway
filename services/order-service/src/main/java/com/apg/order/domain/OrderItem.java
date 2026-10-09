@@ -22,6 +22,7 @@ public class OrderItem {
         this.unitAmountMinor = unitAmountMinor;
     }
 
+    public UUID getOrderId() { return orderId; }
     public String getName() { return name; }
     public int getQuantity() { return quantity; }
     public long getUnitAmountMinor() { return unitAmountMinor; }

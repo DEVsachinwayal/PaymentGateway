@@ -24,7 +24,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
 @SpringBootTest(properties = {
-        "POSTGRES_USER=ignored", "POSTGRES_PASSWORD=ignored", "INTERNAL_SERVICE_TOKEN=internal-token-for-tests-123"})
+        "POSTGRES_USER=ignored", "POSTGRES_PASSWORD=ignored", "INTERNAL_SERVICE_TOKEN=internal-token-for-tests-123",
+        "spring.jpa.properties.hibernate.generate_statistics=true"})
 @AutoConfigureMockMvc
 class OrderFlowTest {
     static final String TOKEN = "internal-token-for-tests-123";
@@ -36,6 +37,7 @@ class OrderFlowTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired JdbcTemplate jdbc;
+    @Autowired jakarta.persistence.EntityManagerFactory emf;
 
     private MockHttpServletRequestBuilder apiKeyCaller(MockHttpServletRequestBuilder b, UUID merchant) {
         return b.header("X-Internal-Token", TOKEN).header("X-Merchant-Id", merchant.toString())
@@ -63,6 +65,17 @@ class OrderFlowTest {
              "metadata":{"cart":"c-42"}}""";
 
     private String order(String ref) { return ORDER.formatted(ref); }
+
+    /** Guards the N+1 found by the load test: a 20-order page used to cost ~42 SQL statements. */
+    @Test void listingOrdersUsesAConstantNumberOfQueries() throws Exception {
+        UUID m = UUID.randomUUID();
+        for (int i = 0; i < 12; i++) create(m, "idem-" + UUID.randomUUID(), order("R-" + UUID.randomUUID())).andExpect(status().isCreated());
+        var stats = emf.unwrap(org.hibernate.SessionFactory.class).getStatistics();
+        stats.clear();
+        get(m, "/api/v1/orders?size=20").andExpect(status().isOk()).andExpect(jsonPath("$.data.content.length()").value(12))
+                .andExpect(jsonPath("$.data.content[0].items.length()").value(2)).andExpect(jsonPath("$.data.content[0].customer.name").value("Asha"));
+        assertTrue(stats.getPrepareStatementCount() <= 5, "statements for one page: " + stats.getPrepareStatementCount());
+    }
 
     @Test void createsAndFetchesOrderWithIntegerMinorUnits() throws Exception {
         UUID m = UUID.randomUUID();
