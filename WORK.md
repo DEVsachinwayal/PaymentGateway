@@ -32,7 +32,7 @@ User communicates in Marathi/English. User asked: build the whole project per sp
 | M11 | Settlement + Reconciliation | DONE (settlement-service 8090; 10 tests; PayU auto-fetch external; import API for evidence) |
 | M12 | Kafka/Redis/Notifications/DLQ | DONE (outbox->Kafka, ledger+notification consumers, DLT; email + extra Redis use deferred) |
 | M13 | Security + Observability | DONE (see docs/SECURITY.md, docs/OBSERVABILITY.md; scanning in CI is M15) |
-| M14 | Performance (JMeter) | todo |
+| M14 | Performance (JMeter) | DONE except executing the JMeter plan (download failed; plan + autocannon results in docs/PERFORMANCE.md, N+1 and API-key cache fixed) |
 | M15 | OCI + CI/CD (needs user's OCI account) | todo |
 | M16 | Release readiness | todo |
 Frontend (React merchant dashboard) is built incrementally alongside M3..M11.
@@ -59,5 +59,5 @@ Frontend (React merchant dashboard) is built incrementally alongside M3..M11.
 ## NEXT STEPS (in order)
 1. Finish/verify the real PayU sandbox payment (above); fix whatever it reveals (callback field names, hash with real data).
 2. M9 Refund DONE (see docs/REFUNDS.md). Dashboard Refunds screens still TODO. First real sandbox refund must confirm PayU check_action_status JSON shape.
-3. M10 Ledger + M11 Settlement DONE. M12 + M13 DONE. Next: M14 JMeter, M15 OCI/CI-CD, M16 release docs.
+3. M10 Ledger + M11 Settlement DONE. M12 + M13 + M14 DONE (run the JMeter plan when JMeter is installed: performance/run-jmeter.sh). Next: M15 OCI/CI-CD, M16 release docs.
 4. React dashboard v1 is DONE (frontend/, branch feature/frontend: login, onboarding, overview, payments+timeline, orders, API keys, webhooks, settings; run `cd frontend && npm install && npm run dev` -> :5173, proxies /api to gateway). TODO there: refunds, settlements, webhook delivery history, team/roles screens (need backend), server-side stats endpoint. Phase 2 (outside spec): payment links, invoices, QR, subscriptions. Still open: ops APIs (activate merchant, grant roles), fill the stub docs (ARCHITECTURE, SERVICES, DATABASE, SECURITY, TESTING...).

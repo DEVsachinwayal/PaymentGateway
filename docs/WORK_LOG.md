@@ -136,3 +136,7 @@
 - RS256 access tokens (auth-service) + gateway JwtVerifier (kid rotation, algorithm confusion tests, live-verified); scripts/gen-jwt-keys.sh; gateway actuator on internal port 8180; no-store + security-header test.
 - Append-only audit trail in merchant/refund/settlement/ledger/notification + merchant activity log API.
 - Docs: OBSERVABILITY.md, SECURITY.md. Open: dependency/secret scanning (M15 CI), operator RBAC, mTLS, JMeter (M14).
+
+## 2026-10-09 – M14 performance (branches feature/performance, perf-fixes, api-gateway)
+- JMeter plan generator + scripts + safety rules; quick autocannon tool; load found two real problems: N+1 in order/payment listings and uncached API-key verification. Fixed with guard tests; throughput 2-5x on the laptop (docs/PERFORMANCE.md).
+- Not done: executing the JMeter plan itself (tool could not be downloaded here), soak test, OCI-sized numbers.
