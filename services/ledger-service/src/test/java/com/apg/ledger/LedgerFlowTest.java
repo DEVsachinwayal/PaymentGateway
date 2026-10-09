@@ -188,6 +188,21 @@ class LedgerFlowTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"x\"}")).andExpect(status().isNotFound());
     }
 
+    @Test void providerSettlementMovesReceivableToBankAndFees() throws Exception {
+        UUID settlement = UUID.randomUUID();
+        String ev = "{\"eventId\":\"" + UUID.randomUUID() + "\",\"eventType\":\"settlement.created\",\"aggregateId\":\"" + settlement
+                + "\",\"merchantId\":\"00000000-0000-0000-0000-000000000000\",\"occurredAt\":\"2026-10-09T10:00:00Z\",\"payload\":{\"provider\":\"payu\","
+                + "\"currency\":\"INR\",\"gross\":22000,\"refunds\":2000,\"providerFees\":519,\"amount\":19481}}";
+        deliver(ev).andExpect(status().isOk()).andExpect(jsonPath("$.data.outcome").value("POSTED"));
+        deliver(ev).andExpect(jsonPath("$.data.outcome").value("REPLAYED"));
+        List<String> rows = jdbc.queryForList("""
+                SELECT a.code || ':' || e.side || ':' || e.amount FROM ledger_entries e JOIN ledger_accounts a ON a.id = e.account_id
+                JOIN ledger_transactions t ON t.id = e.transaction_id WHERE t.reference_id = ? ORDER BY e.id""", String.class, settlement);
+        assertEquals(List.of("APG_BANK:DEBIT:19481", "PROVIDER_FEE_EXPENSE:DEBIT:519", "PROVIDER_RECEIVABLE_PAYU:CREDIT:20000"), rows);
+        assertEquals("DEBIT", jdbc.queryForObject("select normal_side from ledger_accounts where code = 'PROVIDER_FEE_EXPENSE'", String.class));
+        deliver(ev.replace("19481", "-1").replace(UUID.randomUUID().toString(), "x")).andExpect(status().is4xxClientError());
+    }
+
     @Test void theBooksBalanceAfterEverythingAbove() throws Exception {
         capture(UUID.randomUUID(), 12345);
         JsonNode t = mapper.readTree(mvc.perform(MockMvcRequestBuilders.get("/internal/v1/ledger/trial-balance").header("X-Internal-Token", TOKEN))
