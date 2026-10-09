@@ -69,3 +69,11 @@ Operators import the provider's batch (same API a future PayU adapter will call)
 Each difference is an exception with reason + evidence; a failed lookup leaves the item unevaluated (batch IMPORTED, retried), operator decisions are final, a batch is announced to the ledger only when fully reconciled.
 ## D35 – A merchant payout is PAID only with a payout reference
 Evidence-based status (CHECK constraint), mirroring "never mark settlement successful without provider evidence".
+## D36 – Events: transactional outbox + Kafka, at-least-once, idempotent consumers
+Producers write the event in the same DB transaction as the state change; apg-common relays it in order. Consumers (ledger, notification) are idempotent by event id. Poison events go to <topic>.DLT; transient failures retry with backoff first.
+## D37 – Merchant webhooks are signed with t + "." + body (HMAC-SHA256) and delivered by a separate service
+Secrets are fetched from merchant-service at send time (never stored in notification-service). SSRF guard at delivery, no redirects, response body never read. Merchant must de-duplicate by event id.
+## D38 – No email channel / templates yet
+Notification templates and email need an SMTP provider (external dependency). Only the webhook channel is built; the job/attempt tables are channel-agnostic.
+## D39 – Redis stays gateway-only for now
+Rate limiting uses Redis; no cache was added for API-key verification to avoid revocation lag. Revisit with measurements in M14.

@@ -17,6 +17,7 @@ public record GatewayProperties(
         String refundUri,
         String ledgerUri,
         String settlementUri,
+        String notificationUri,
         List<String> corsAllowedOrigins,
         long maxRequestBytes,
         RateLimit rateLimit) {

@@ -91,6 +91,13 @@ public class GatewayConfig {
                                 .setRequestSize(props.maxRequestBytes())
                                 .secureHeaders())
                         .uri(props.settlementUri()))
+                // merchant webhook delivery history + resend; dashboard users only
+                .route("notification-service", r -> r.path("/api/v1/webhook-deliveries/**", "/api/v1/webhook-deliveries")
+                        .filters(f -> f
+                                .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))
+                                .setRequestSize(props.maxRequestBytes())
+                                .secureHeaders())
+                        .uri(props.notificationUri()))
                 .route("payment-service", r -> r.path("/api/v1/payments/**", "/api/v1/payments")
                         .filters(f -> f
                                 .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))
