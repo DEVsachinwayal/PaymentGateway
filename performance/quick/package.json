@@ -1,0 +1,8 @@
+{
+  "name": "apg-quick-load",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Quick local load check with autocannon (the JMeter plan in ../jmeter is the formal one). LOCAL ONLY.",
+  "scripts": { "start": "node quick-load.js" },
+  "dependencies": { "autocannon": "^8.0.0" }
+}

@@ -14,3 +14,5 @@ dist/
 frontend/.vite/
 performance/data/
 performance/results/
+performance/quick/node_modules/
+performance/results-quick.json

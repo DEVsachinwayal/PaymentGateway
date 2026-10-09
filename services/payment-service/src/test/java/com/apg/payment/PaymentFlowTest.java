@@ -37,7 +37,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
 @SpringBootTest(properties = {
-        "POSTGRES_USER=ignored", "POSTGRES_PASSWORD=ignored", "INTERNAL_SERVICE_TOKEN=internal-token-for-tests-123"})
+        "POSTGRES_USER=ignored", "POSTGRES_PASSWORD=ignored", "INTERNAL_SERVICE_TOKEN=internal-token-for-tests-123",
+        "spring.jpa.properties.hibernate.generate_statistics=true"})
 @AutoConfigureMockMvc
 class PaymentFlowTest {
     static final String TOKEN = "internal-token-for-tests-123";
@@ -131,6 +132,18 @@ class PaymentFlowTest {
 
     private String createPayment(UUID m, UUID orderId) throws Exception {
         return read(create(m, "k-" + UUID.randomUUID(), body(orderId)).andExpect(status().isCreated())).at("/data/id").asText();
+    }
+
+    @Autowired jakarta.persistence.EntityManagerFactory emf;
+
+    /** Guards the N+1 found by the load test: one intent lookup per payment on every list call. */
+    @Test void listingPaymentsUsesAConstantNumberOfQueries() throws Exception {
+        UUID m = UUID.randomUUID();
+        for (int i = 0; i < 12; i++) createPayment(m, order(m, 1000 + i, "CREATED"));
+        var stats = emf.unwrap(org.hibernate.SessionFactory.class).getStatistics();
+        stats.clear();
+        get(m, "/api/v1/payments?size=20").andExpect(status().isOk()).andExpect(jsonPath("$.data.content.length()").value(12));
+        assertTrue(stats.getPrepareStatementCount() <= 4, "statements for one page: " + stats.getPrepareStatementCount());
     }
 
     @Test void amountAndCurrencyComeFromTheOrderAndInitialStateIsCreated() throws Exception {

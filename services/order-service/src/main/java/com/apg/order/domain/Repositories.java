@@ -18,6 +18,7 @@ public final class Repositories {
 
     public interface OrderItemRepository extends JpaRepository<OrderItem, UUID> {
         List<OrderItem> findByOrderId(UUID orderId);
+        List<OrderItem> findByOrderIdIn(java.util.Collection<UUID> orderIds);
     }
 
     public interface CustomerRepository extends JpaRepository<Customer, UUID> {

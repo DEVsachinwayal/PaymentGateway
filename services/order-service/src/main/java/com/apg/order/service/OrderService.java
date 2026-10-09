@@ -93,9 +93,15 @@ public class OrderService {
     public PageView<OrderView> list(UUID merchantId, int page, int size) {
         var p = orders.findByMerchantId(merchantId,
                 PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100), Sort.by(Sort.Direction.DESC, "createdAt")));
-        List<OrderView> content = p.getContent().stream().map(o -> view(o,
-                o.getCustomerId() == null ? null : customers.findById(o.getCustomerId()).orElse(null),
-                items.findByOrderId(o.getId()))).toList();
+        // two batch queries instead of two per order (the N+1 made a 20-row page cost ~42 SQL statements)
+        var customerIds = p.getContent().stream().map(Order::getCustomerId).filter(java.util.Objects::nonNull).distinct().toList();
+        Map<UUID, Customer> byCustomer = customerIds.isEmpty() ? Map.of()
+                : customers.findAllById(customerIds).stream().collect(java.util.stream.Collectors.toMap(Customer::getId, c -> c));
+        var orderIds = p.getContent().stream().map(Order::getId).toList();
+        Map<UUID, List<OrderItem>> byOrder = orderIds.isEmpty() ? Map.of()
+                : items.findByOrderIdIn(orderIds).stream().collect(java.util.stream.Collectors.groupingBy(OrderItem::getOrderId));
+        List<OrderView> content = p.getContent().stream()
+                .map(o -> view(o, o.getCustomerId() == null ? null : byCustomer.get(o.getCustomerId()), byOrder.getOrDefault(o.getId(), List.of()))).toList();
         return new PageView<>(content, p.getNumber(), p.getSize(), p.getTotalElements());
     }
 
