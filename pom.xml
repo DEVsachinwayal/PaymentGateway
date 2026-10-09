@@ -32,5 +32,6 @@
     <module>services/webhook-service</module>
     <module>services/refund-service</module>
     <module>services/ledger-service</module>
+    <module>services/settlement-service</module>
   </modules>
 </project>

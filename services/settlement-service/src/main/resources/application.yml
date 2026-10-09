@@ -1,0 +1,41 @@
+server:
+  port: 8090
+  tomcat:
+    max-swallow-size: 2MB
+
+spring:
+  application:
+    name: settlement-service
+  datasource:
+    url: ${SETTLEMENT_DB_URL:jdbc:postgresql://localhost:5433/apg_settlement}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  servlet:
+    multipart:
+      enabled: false
+  jackson:
+    deserialization:
+      accept-float-as-int: false
+      fail-on-unknown-properties: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+apg:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN}
+  settlement:
+    payment-service-uri: ${PAYMENT_SERVICE_URI:http://localhost:8084}
+    refund-service-uri: ${REFUND_SERVICE_URI:http://localhost:8088}
+    max-items-per-batch: 5000
+    # re-run reconciliation of batches that still have unevaluated items or open work
+    rerun:
+      enabled: true
+      interval: 10m
