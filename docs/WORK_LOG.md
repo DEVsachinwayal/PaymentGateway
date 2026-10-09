@@ -104,3 +104,10 @@
 ## 2026-10-09 – end of chat 1: full stack up, real PayU payment prepared
 - All 8 services run together (scripts/dev-start.sh). Created order (INR 100.00) -> payment -> checkout link; payment is PROCESSING (page rendered, form to test.payu.in/_payment with valid fields). User still has to complete the payment in a browser; result not yet observed.
 - See WORK.md "CURRENT STATE" and "NEXT STEPS" for exact resume instructions.
+
+## 2026-10-09 – M9 refund-service (branch feature/refund-service) + provider refund status
+- provider-integration: `POST /internal/v1/providers/{p}/refunds/status` (PayU check_action_status), SUCCESS only when explicit. Tests 24 (+1 opt-in live).
+- payment-service: transition source REFUND allowed; events payment.refund_pending/refunded/partially_refunded.
+- refund-service (8088, DB apg_refund): create/get/list, idempotency, over-refund lock, dispatch, status worker with backoff, payment sync, operator resolve, outbox. Tests 12/12.
+- api-gateway: /api/v1/refunds/** route (+test). dev-start.sh starts refund-service.
+- Frontend Refunds screens still TODO.

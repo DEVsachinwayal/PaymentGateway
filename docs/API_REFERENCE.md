@@ -40,3 +40,11 @@ Order status: CREATED -> PAID / CANCELLED / EXPIRED (updated by payment flow lat
 | GET | /api/v1/payments/{id} | |
 | GET | /api/v1/payments/{id}/status | state + full history |
 | GET | /api/v1/payments?page&size | |
+
+## Refunds (refund-service; API key or dashboard user, create = API key or MERCHANT_ADMIN)
+| Method | Path | Notes |
+|---|---|---|
+| POST | /api/v1/refunds | `Idempotency-Key` required. Body {paymentId, [amount minor units, default = all still refundable], [reason]}. 202 refund (status CREATED). Errors: 400 VALIDATION_FAILED/IDEMPOTENCY_KEY_REQUIRED/MALFORMED_REQUEST, 404 PAYMENT_NOT_FOUND, 409 PAYMENT_NOT_REFUNDABLE, 422 REFUND_EXCEEDS_PAYMENT / IDEMPOTENCY_KEY_REUSED |
+| GET | /api/v1/refunds/{id} | 404 REFUND_NOT_FOUND for other merchants' refunds |
+| GET | /api/v1/refunds?paymentId&page&size | newest first |
+Refund status: CREATED -> PROCESSING -> SUCCESS / FAILED; VERIFY_REQUIRED when the provider outcome is unclear (handled by APG operations).

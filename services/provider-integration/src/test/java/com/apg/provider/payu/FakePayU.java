@@ -48,6 +48,10 @@ public class FakePayU implements AutoCloseable {
                     s = "{\"message\":\"Invalid requests limit reached. Kindly connect with your KAM\"}";
                 }
                 body = s;
+            } else if ("check_action_status".equals(form.get("command"))) {
+                body = scenarios.getOrDefault("refundstatus:" + form.get("var1"),
+                        "{\"status\":1,\"msg\":\"fetched\",\"transaction_details\":{\"403993715\":{\"" + form.get("var1")
+                                + "\":{\"request_id\":\"" + form.get("var1") + "\",\"token\":\"RF0001abc\",\"status\":\"queued\"}}}}");
             } else {
                 body = scenarios.getOrDefault("refund:" + form.get("var2"),
                         "{\"status\":1,\"msg\":\"Refund Request Queued\",\"request_id\":\"77001\"}");

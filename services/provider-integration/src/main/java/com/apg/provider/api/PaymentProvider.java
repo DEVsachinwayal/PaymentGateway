@@ -22,6 +22,9 @@ public interface PaymentProvider {
 
     RefundResponse refund(RefundRequest request);
 
+    /** Asks the provider how a previously accepted refund ended. @throws ProviderException on provider trouble. */
+    RefundStatusResponse getRefundStatus(RefundStatusRequest request);
+
     /** Authenticates a callback/webhook (signature or hash) and normalises it. Never marks anything paid by itself. */
     ProviderWebhookResult verifyWebhook(ProviderWebhookRequest request);
 

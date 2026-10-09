@@ -132,6 +132,37 @@ public class PayUProvider implements PaymentProvider {
         return new RefundResponse(RefundStatus.REJECTED, null, text(root, "msg"));
     }
 
+    @Override
+    public RefundStatusResponse getRefundStatus(RefundStatusRequest r) {
+        JsonNode root = postService("check_action_status", r.providerRequestId(), null, "REFUND_STATUS", r.refundReference());
+        if (root.path("status").asInt(0) != 1) {
+            throw new ProviderException("PROVIDER_BAD_RESPONSE", "check_action_status status != 1: " + text(root, "msg"));
+        }
+        // PayU nests the refund record under transaction_details; find the object for our request/token without
+        // depending on the exact nesting. Anything not explicitly final stays PROCESSING (never guess success).
+        String raw = findRefundStatus(root.path("transaction_details"), r.providerRequestId(), r.refundReference());
+        return new RefundStatusResponse(normalizeRefund(raw), raw);
+    }
+
+    private static String findRefundStatus(JsonNode n, String requestId, String token) {
+        if (n == null || !n.isObject()) return null;
+        boolean mine = requestId.equals(text(n, "request_id")) || token.equals(text(n, "token"));
+        if (mine && n.hasNonNull("status")) return n.get("status").asText();
+        var it = n.elements();
+        while (it.hasNext()) {
+            String found = findRefundStatus(it.next(), requestId, token);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    static RefundOutcome normalizeRefund(String raw) {
+        String s = raw == null ? "" : raw.toLowerCase(Locale.ROOT).trim();
+        if (s.equals("success") || s.equals("refunded")) return RefundOutcome.SUCCESS;
+        if (s.equals("failure") || s.equals("failed") || s.equals("rejected")) return RefundOutcome.FAILED;
+        return RefundOutcome.PROCESSING;
+    }
+
     // ---------------------------------------------------------------- callback (surl/furl/webhook)
     @Override
     public ProviderWebhookResult verifyWebhook(ProviderWebhookRequest request) {

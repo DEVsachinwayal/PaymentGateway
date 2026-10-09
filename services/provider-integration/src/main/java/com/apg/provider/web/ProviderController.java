@@ -63,6 +63,11 @@ public class ProviderController {
         return ApiResponse.ok(registry.get(provider).refund(r));
     }
 
+    @PostMapping("/{provider}/refunds/status")
+    ApiResponse<RefundStatusResponse> refundStatus(@PathVariable String provider, @Valid @RequestBody RefundStatusRequest r) {
+        return ApiResponse.ok(guard(() -> registry.get(provider).getRefundStatus(r)));
+    }
+
     /** Provider trouble is reported as 502 so callers treat the money outcome as UNKNOWN, not as a failure. */
     private static <T> T guard(java.util.function.Supplier<T> call) {
         try {

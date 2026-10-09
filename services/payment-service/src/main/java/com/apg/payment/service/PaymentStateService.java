@@ -73,6 +73,9 @@ public class PaymentStateService {
             case SUCCESS -> "payment.success";
             case FAILED -> "payment.failed";
             case VERIFY_REQUIRED -> "payment.unknown";
+            case REFUND_PENDING -> "payment.refund_pending";
+            case REFUNDED -> "payment.refunded";
+            case PARTIALLY_REFUNDED -> "payment.partially_refunded";
             default -> null;
         };
         if (event != null) publish(event, p, now);

@@ -102,6 +102,7 @@ class GatewayFlowTest {
         r.add("apg.gateway.payment-uri", () -> url);
         r.add("apg.gateway.orchestrator-uri", () -> url);
         r.add("apg.gateway.webhook-uri", () -> url);
+        r.add("apg.gateway.refund-uri", () -> url);
         r.add("apg.gateway.internal-token", () -> "internal-token-for-tests-123");
         r.add("apg.gateway.rate-limit.replenish-per-second", () -> 1);
         r.add("apg.gateway.rate-limit.burst", () -> 3);
@@ -191,6 +192,14 @@ class GatewayFlowTest {
                 .exchange().expectStatus().isForbidden();
         web.get().uri("/api/v1/orders/abc").header("X-Api-Key", "sk_test_bad.secret")
                 .exchange().expectStatus().isUnauthorized().expectBody().jsonPath("$.error.code").isEqualTo("INVALID_API_KEY");
+    }
+
+    @Test @Order(2)
+    void refundsAreRoutedAndAcceptApiKeysButNeverAnonymous() {
+        web.get().uri("/api/v1/refunds/abc").exchange().expectStatus().isUnauthorized();
+        web.get().uri("/api/v1/refunds/abc").header("Authorization", "Bearer sk_test_good.secret")
+                .header("X-Merchant-Id", "attacker").exchange().expectStatus().isOk().expectBody()
+                .jsonPath("$.path").isEqualTo("/api/v1/refunds/abc").jsonPath("$.merchant").isEqualTo("merch-api");
     }
 
     @Test @Order(2)

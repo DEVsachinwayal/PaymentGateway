@@ -71,6 +71,12 @@ public class GatewayConfig {
                                 .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))
                                 .setRequestSize(props.maxRequestBytes()))
                         .uri(props.webhookUri()))
+                .route("refund-service", r -> r.path("/api/v1/refunds/**", "/api/v1/refunds")
+                        .filters(f -> f
+                                .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))
+                                .setRequestSize(props.maxRequestBytes())
+                                .secureHeaders())
+                        .uri(props.refundUri()))
                 .route("payment-service", r -> r.path("/api/v1/payments/**", "/api/v1/payments")
                         .filters(f -> f
                                 .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))

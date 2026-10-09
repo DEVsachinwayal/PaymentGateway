@@ -26,7 +26,7 @@ public final class PaymentDtos {
     public record StatusView(UUID paymentId, String status, Instant updatedAt, List<HistoryItem> history) {}
 
     public record TransitionRequest(@NotNull PaymentStatus to, @Size(max = 300) String reason,
-                                    @NotBlank @Pattern(regexp = "^(ORCHESTRATOR|WEBHOOK|VERIFICATION|OPS)$") String source) {}
+                                    @NotBlank @Pattern(regexp = "^(ORCHESTRATOR|WEBHOOK|VERIFICATION|REFUND|OPS)$") String source) {}
 
     public record PageView<T>(List<T> content, int page, int size, long totalElements) {}
 }
