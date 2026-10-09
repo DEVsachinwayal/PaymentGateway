@@ -123,7 +123,7 @@ public class LedgerService {
 
     /** Asset accounts grow with debits; liability and revenue accounts grow with credits. */
     static String normalSideOf(String code) {
-        return code.startsWith("PROVIDER_RECEIVABLE") || code.startsWith("APG_BANK") ? "DEBIT" : "CREDIT";
+        return code.startsWith("PROVIDER_RECEIVABLE") || code.startsWith("APG_BANK") || code.startsWith("PROVIDER_FEE_EXPENSE") ? "DEBIT" : "CREDIT";
     }
 
     private static String truncate(String s, int max) {

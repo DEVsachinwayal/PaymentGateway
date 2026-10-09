@@ -43,6 +43,7 @@ public class LedgerEvents {
     public Handled handle(JsonNode event) {
         String type = text(event, "eventType");
         if (type == null) throw bad("eventType missing");
+        if (type.equals("settlement.created")) return settlement(event);
         if (!type.equals("payment.success") && !type.equals("refund.success")) {
             return new Handled(Outcome.IGNORED, null);          // other events carry no money movement
         }
@@ -75,6 +76,32 @@ public class LedgerEvents {
                     + payload.path("paymentId").asText(""), occurred, lines);
         }
         Result r = ledger.post(posting);
+        return new Handled(r.replayed() ? Outcome.REPLAYED : Outcome.POSTED, r.transactionId());
+    }
+
+    /**
+     * The provider paid APG for a fully reconciled batch (platform level, no merchant):
+     * DR APG_BANK net received, DR PROVIDER_FEE_EXPENSE fees / CR PROVIDER_RECEIVABLE_{provider} net + fees.
+     * The receivable shrinks by (payments - refunds), which is exactly what the provider settled.
+     */
+    private Handled settlement(JsonNode event) {
+        UUID eventId = uuid(event, "eventId");
+        UUID reference = uuid(event, "aggregateId");
+        JsonNode p = event.path("payload");
+        long net = p.path("amount").isIntegralNumber() ? p.path("amount").asLong() : -1;
+        long fees = p.path("providerFees").isIntegralNumber() ? p.path("providerFees").asLong() : -1;
+        String currency = p.path("currency").asText("");
+        if (net < 0 || fees < 0) throw bad("payload.amount and payload.providerFees must be non-negative integers (minor units)");
+        if (!currency.matches("^[A-Z]{3}$")) throw bad("payload.currency invalid");
+        if (net + fees == 0) return new Handled(Outcome.IGNORED, null);
+        String provider = p.path("provider").asText("UNKNOWN").toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]", "");
+        if (provider.isEmpty()) provider = "UNKNOWN";
+        List<Line> lines = new ArrayList<>();
+        if (net > 0) lines.add(new Line("APG_BANK", null, Side.DEBIT, net));
+        if (fees > 0) lines.add(new Line("PROVIDER_FEE_EXPENSE", null, Side.DEBIT, fees));
+        lines.add(new Line("PROVIDER_RECEIVABLE_" + provider, null, Side.CREDIT, net + fees));
+        Result r = ledger.post(new Posting(eventId, "SETTLEMENT", reference, null, currency, "Provider settlement " + reference,
+                parseInstant(text(event, "occurredAt")), lines));
         return new Handled(r.replayed() ? Outcome.REPLAYED : Outcome.POSTED, r.transactionId());
     }
 
