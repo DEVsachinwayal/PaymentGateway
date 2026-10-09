@@ -25,7 +25,7 @@ Source of truth: the master implementation documentation (extract in `docs/MASTE
 | 22 Docker/local | compose infra, health checks, profiles, .env.example | docker-compose*.yml, scripts | validated + dashboard image built | Java service images not built locally (network) |
 | 23 OCI | architecture and deployment | docs/ORACLE_CLOUD.md | design only | needs OCI account |
 | 24 CI/CD | build, test, scan, push, deploy, rollback | `.github/workflows`, scripts/deploy.sh | YAML/compose validated | never executed |
-| 25 Dashboard | login, summary, API keys, orders/payments + timeline, refunds, webhooks + history, settlements, roles | `frontend/` | `npm run build`, API flows | refunds / settlements / ledger / deliveries / activity screens are being added (see WORK.md) |
+| 25 Dashboard | login, summary, API keys, orders/payments + timeline, refunds, webhooks + history, settlements, roles | `frontend/` | `npm run build`, API flows | team management, test-mode toggle |
 | 26 Gates | production readiness | docs/RELEASE_READINESS.md | - | external items |
 | 28 Definition of done | docs, tests, observability per feature | per service README + docs | - | - |
 | 29 External deps | listed | docs/TODO.md | - | all external |

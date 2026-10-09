@@ -11,18 +11,28 @@ import Orders from './pages/Orders'
 import ApiKeys from './pages/ApiKeys'
 import Webhooks from './pages/Webhooks'
 import Settings from './pages/Settings'
+import Refunds from './pages/Refunds'
+import Ledger from './pages/Ledger'
+import Settlements from './pages/Settlements'
+import Deliveries from './pages/Deliveries'
+import Activity from './pages/Activity'
 
 const NAV: [string, string, string][] = [
   ['/', '🏠', 'Overview'],
   ['/payments', '💳', 'Payments'],
   ['/orders', '🧾', 'Orders'],
+  ['/refunds', '↩️', 'Refunds'],
+  ['/settlements', '🏦', 'Settlements'],
+  ['/ledger', '📒', 'Ledger'],
 ]
 const DEV: [string, string, string][] = [
   ['/api-keys', '🔑', 'API keys'],
   ['/webhooks', '🔔', 'Webhooks'],
+  ['/deliveries', '📬', 'Webhook deliveries'],
+  ['/activity', '📜', 'Activity log'],
   ['/settings', '⚙️', 'Settings'],
 ]
-const SOON = ['Refunds', 'Settlements', 'Payment links']
+const SOON = ['Payment links']
 
 export default function App() {
   const { ready, email, merchant, needsOnboarding, logout } = useAuth()
@@ -70,6 +80,11 @@ export default function App() {
           <Route path="/api-keys" element={<ApiKeys />} />
           <Route path="/webhooks" element={<Webhooks />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/refunds" element={<Refunds />} />
+          <Route path="/settlements" element={<Settlements />} />
+          <Route path="/ledger" element={<Ledger />} />
+          <Route path="/deliveries" element={<Deliveries />} />
+          <Route path="/activity" element={<Activity />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

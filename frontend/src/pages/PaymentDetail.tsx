@@ -1,27 +1,35 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, type Order, type Payment, type PaymentStatus } from '../api'
+import { api, type Order, type Page, type Payment, type PaymentStatus, type Refund } from '../api'
+import RefundModal from '../RefundModal'
 import { Badge, ErrorNote, PageHead, Spinner, useLoad } from '../components'
 import { dt, money } from '../util'
 
 export default function PaymentDetail() {
   const { id } = useParams()
+  const [refunding, setRefunding] = useState(false)
   const { data, error, loading, reload } = useLoad(async () => {
     const [payment, status] = await Promise.all([
       api<Payment>('GET', `/api/v1/payments/${id}`),
       api<PaymentStatus>('GET', `/api/v1/payments/${id}/status`),
     ])
     const order = await api<Order>('GET', `/api/v1/orders/${payment.orderId}`).catch(() => null)
-    return { payment, status, order }
+    const refunds = await api<Page<Refund>>('GET', `/api/v1/refunds?paymentId=${id}&size=50`).then((r) => r.content).catch(() => [] as Refund[])
+    return { payment, status, order, refunds }
   }, [id])
 
   if (loading) return <Spinner />
   if (!data) return <><PageHead title="Payment" /><ErrorNote error={error} /></>
-  const { payment: p, status, order } = data
+  const { payment: p, status, order, refunds } = data
+  const reserved = refunds.filter((r) => r.status !== 'FAILED').reduce((s, r) => s + r.amount, 0)
+  const left = p.amount - reserved
+  const canRefund = ['SUCCESS', 'PARTIALLY_REFUNDED', 'REFUND_PENDING'].includes(p.status) && left > 0
 
   return (
     <>
       <PageHead title={money(p.amount, p.currency)} sub={`Payment ${p.id}`}>
         <Badge status={p.status} />
+        {canRefund && <button className="btn primary" onClick={() => setRefunding(true)}>↩ Refund</button>}
         <button className="btn" onClick={reload}>↻ Refresh</button>
       </PageHead>
       <p><Link to="/payments">← All payments</Link></p>
@@ -51,6 +59,17 @@ export default function PaymentDetail() {
               <dt>Order</dt><dd className="mono">{p.orderId}</dd>
             </dl>
           </div>
+          {refunds.length > 0 && (
+            <div className="card">
+              <h2>Refunds</h2>
+              {refunds.map((r) => (
+                <div key={r.id} className="row" style={{ padding: '6px 0' }}>
+                  <span className="grow"><b>{money(r.amount, r.currency)}</b> <span className="muted">{dt(r.createdAt)}</span></span><Badge status={r.status} />
+                </div>
+              ))}
+              <div className="muted" style={{ marginTop: 6 }}>Left to refund: {money(Math.max(left, 0), p.currency)}</div>
+            </div>
+          )}
           {order && (
             <div className="card">
               <h2>Order</h2>
@@ -64,6 +83,7 @@ export default function PaymentDetail() {
           )}
         </div>
       </div>
+      {refunding && <RefundModal paymentId={p.id} currency={p.currency} maxMinor={left} onClose={() => setRefunding(false)} onDone={() => { setRefunding(false); reload() }} />}
     </>
   )
 }
