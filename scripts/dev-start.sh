@@ -14,8 +14,11 @@ for s in auth-service merchant-service order-service payment-service provider-in
   if [ "$n" != "1" ]; then echo "ERROR: $s jar lacks apg-common auto-configuration; rebuild it (see comment in scripts/dev-start.sh)"; exit 2; fi
 done
 set -a; . ./.env; set +a
+# 12 services x Hikari default 10 connections would exceed Postgres max_connections (100)
+export SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE="${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE:-5}"
 export APG_EVENTS_ENABLED="${APG_EVENTS_ENABLED:-true}"
 export NOTIFICATION_ALLOW_INSECURE_URLS="${NOTIFICATION_ALLOW_INSECURE_URLS:-true}"   # dev only: lets you point a webhook at http://localhost
+export MERCHANT_ALLOW_INSECURE_WEBHOOK_URLS="${MERCHANT_ALLOW_INSECURE_WEBHOOK_URLS:-true}"
 export PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-http://localhost:8080}"
 mkdir -p .run
 for s in auth-service merchant-service order-service payment-service provider-integration payment-orchestrator webhook-service refund-service ledger-service settlement-service notification-service api-gateway; do

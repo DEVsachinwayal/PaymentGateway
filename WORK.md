@@ -53,6 +53,7 @@ Frontend (React merchant dashboard) is built incrementally alongside M3..M11.
 - After editing tests use `mvn clean test` for that module (stale compiled classes once hid a new test).
 - PayU TEST key/salt are in `.env` (verified: PayU accepted our signature). Never print them.
 - **PENDING (user action):** one real sandbox payment through the browser. A payment (id in `.run/last-payment-id`, link in `.run/last-checkout-url`, expires 30 min) was created; if expired create a new one: register/login -> POST /api/v1/merchants -> POST /api/v1/api-keys -> POST /api/v1/orders -> POST /api/v1/payments -> POST /api/v1/payments/{id}/checkout (all with Idempotency-Key where required), open `checkoutUrl`, pay with PayU test instruments (docs/PAYU_INTEGRATION.md), land on /payment-result, then check `GET /api/v1/payments/{id}/status` (expect SUCCESS, history PENDING->PROCESSING->SUCCESS) and tables `webhook_events`, `verification_log`, `provider_attempts`.
+- Live event-pipeline check (dev only, SIMULATES the provider result with the internal token): `bash scripts/smoke-events.sh` -> payment.success -> Kafka -> ledger + signed merchant webhook. All 9 checks passed on 2026-10-09. 12 services share one Postgres: dev-start sets Hikari pool 5 each (default 10 x 12 > max_connections 100).
 - Tip when scripting JSON: use `grep -o '"id":"[^"]*"' | head -1` (first match); a greedy sed picked the nested customer id once.
 
 ## NEXT STEPS (in order)

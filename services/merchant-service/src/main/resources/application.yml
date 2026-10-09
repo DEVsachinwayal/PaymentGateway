@@ -30,5 +30,6 @@ apg:
     # HMAC pepper for API-key secret hashing and AES key (base64, 32 bytes) for webhook signing secrets.
     api-key-pepper: ${API_KEY_HASH_PEPPER}
     webhook-secret-key: ${WEBHOOK_SECRET_KEY}
-    allow-insecure-webhook-urls: false
+    # dev only (scripts/dev-start.sh sets it): allow http://localhost webhook targets
+    allow-insecure-webhook-urls: ${MERCHANT_ALLOW_INSECURE_WEBHOOK_URLS:false}
     rotation-grace-hours-default: 24
