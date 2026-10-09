@@ -111,3 +111,8 @@
 - refund-service (8088, DB apg_refund): create/get/list, idempotency, over-refund lock, dispatch, status worker with backoff, payment sync, operator resolve, outbox. Tests 12/12.
 - api-gateway: /api/v1/refunds/** route (+test). dev-start.sh starts refund-service.
 - Frontend Refunds screens still TODO.
+
+## 2026-10-09 – M10 ledger-service (branch feature/ledger-service)
+- ledger-service (8089, DB apg_ledger): accounts/transactions/entries with DB-enforced immutability + balance; payment.success and refund.success postings; reversal; merchant balance/transactions API; trial balance. Tests 11/11.
+- payment + refund events now carry `provider`; gateway route /api/v1/ledger/** (dashboard users only); dev-start starts ledger-service.
+- Delivery of events to the ledger is M12 (Kafka); until then POST /internal/v1/ledger/events.

@@ -57,3 +57,9 @@ The refund is persisted (CREATED) before PayU is called; payment status is recom
 Over-refund is prevented by a per-payment advisory lock and sum(refunds <> FAILED). VERIFY_REQUIRED keeps the money reserved; only an operator resolution (or provider answer) releases it.
 ## D29 – A queued refund is not a successful refund
 PayU's "request queued" => PROCESSING. SUCCESS needs an explicit success from `check_action_status`; unknown response shapes stay PROCESSING (backoff 60s..30m).
+## D30 – The database enforces ledger integrity
+Immutability triggers (no UPDATE/DELETE/TRUNCATE) and a deferred constraint trigger (balanced, >= 2 entries, one currency per transaction) so even a buggy service or manual SQL cannot corrupt the books. Corrections = compensating REVERSAL transactions.
+## D31 – Ledger consumes events through one idempotent handler
+HTTP delivery now, Kafka in M12, same code path. Idempotency by eventId and by (tx_type, reference_id), so a re-published event or a second publisher cannot double count.
+## D32 – Fee is configurable placeholder pricing
+Default 0 (no fee) until the business defines pricing; capped at the payment amount; refunds do not return the fee (documented, revisit with the business).

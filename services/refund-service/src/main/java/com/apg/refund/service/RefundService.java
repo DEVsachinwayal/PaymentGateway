@@ -316,7 +316,7 @@ public class RefundService {
 
     /** Writes the event envelope (spec 17.1) in the caller's transaction; read back from the row so it is always consistent. */
     private void outbox(String type, UUID refundId, Instant now) {
-        jdbc.query("SELECT merchant_id, payment_id, amount, currency, status FROM refunds WHERE id = ?", rs -> {
+        jdbc.query("SELECT merchant_id, payment_id, amount, currency, status, provider FROM refunds WHERE id = ?", rs -> {
             UUID merchantId = rs.getObject("merchant_id", UUID.class);
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("refundId", refundId);
@@ -324,6 +324,7 @@ public class RefundService {
             payload.put("amount", rs.getLong("amount"));
             payload.put("currency", rs.getString("currency"));
             payload.put("status", rs.getString("status"));
+            payload.put("provider", rs.getString("provider"));
             UUID eventId = UUID.randomUUID();
             String correlation = MDC.get(CorrelationIdFilter.MDC_KEY);
             Map<String, Object> envelope = new LinkedHashMap<>();

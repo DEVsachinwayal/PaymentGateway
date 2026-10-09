@@ -77,6 +77,13 @@ public class GatewayConfig {
                                 .setRequestSize(props.maxRequestBytes())
                                 .secureHeaders())
                         .uri(props.refundUri()))
+                // read-only merchant statement; dashboard users only (API keys are rejected by the gateway filter)
+                .route("ledger-service", r -> r.path("/api/v1/ledger/**")
+                        .filters(f -> f
+                                .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))
+                                .setRequestSize(props.maxRequestBytes())
+                                .secureHeaders())
+                        .uri(props.ledgerUri()))
                 .route("payment-service", r -> r.path("/api/v1/payments/**", "/api/v1/payments")
                         .filters(f -> f
                                 .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))
