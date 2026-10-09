@@ -89,6 +89,7 @@ public class PaymentStateService {
         payload.put("amount", p.getAmountMinor());
         payload.put("currency", p.getCurrency());
         payload.put("status", p.getStatus().name());
+        if (p.getProvider() != null) payload.put("provider", p.getProvider());
         UUID eventId = UUID.randomUUID();
         Map<String, Object> envelope = new LinkedHashMap<>();
         envelope.put("eventId", eventId);

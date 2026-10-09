@@ -31,5 +31,6 @@
     <module>services/payment-orchestrator</module>
     <module>services/webhook-service</module>
     <module>services/refund-service</module>
+    <module>services/ledger-service</module>
   </modules>
 </project>
