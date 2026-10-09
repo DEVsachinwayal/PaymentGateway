@@ -1,6 +1,6 @@
 package com.apg.common.logging;
 
-import com.apg.common.web.CorrelationIdFilter;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -21,7 +21,7 @@ public class JsonLogMain {
     @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
     public void log() {
         Logger log = LoggerFactory.getLogger("apg.test");
-        MDC.put(CorrelationIdFilter.MDC_KEY, "req_json_test_1");
+        MDC.put("correlationId", "req_json_test_1");
         log.info("charged card 4111111111111111 with key sk_test_ab12cd34ef56.0123456789abcdef0123456789abcdef");
         log.warn("failure", new IllegalStateException("password=hunter2hunter2 leaked"));
         MDC.clear();

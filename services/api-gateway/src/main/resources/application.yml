@@ -12,6 +12,9 @@ spring:
       password: ${REDIS_PASSWORD:}
 
 management:
+  server:
+    # actuator (health, prometheus) is NOT served on the public 8080: scrape/probe this internal port only
+    port: ${GATEWAY_MANAGEMENT_PORT:8180}
   endpoints:
     web:
       exposure:

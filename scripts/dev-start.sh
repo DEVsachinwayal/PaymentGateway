@@ -26,7 +26,7 @@ for s in auth-service merchant-service order-service payment-service provider-in
   echo "started $s"
 done
 for i in $(seq 1 80); do
-  ok=1; for p in 8080 8081 8082 8083 8084 8085 8086 8087 8088 8089 8090 8091; do curl -s localhost:$p/actuator/health | grep -q UP || ok=0; done
+  ok=1; for p in 8180 8081 8082 8083 8084 8085 8086 8087 8088 8089 8090 8091; do curl -s localhost:$p/actuator/health | grep -q UP || ok=0; done
   [ $ok = 1 ] && { echo "all services UP (gateway http://localhost:8080)"; exit 0; }; sleep 3
 done
 echo "some services did not become healthy; see .run/*.log"; exit 1
