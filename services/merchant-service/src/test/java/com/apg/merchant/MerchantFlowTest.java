@@ -214,6 +214,11 @@ class MerchantFlowTest {
         assertTrue(all.contains("user:" + u), "the actor is recorded");
         assertNotNull(jdbc.queryForObject("select count(*) from audit_events where correlation_id is not null or true", Integer.class));
 
+        // hosted pages (payment links) can ask for the public profile only: no ids of users, no secrets
+        String prof = mvc.perform(MockMvcRequestBuilders.get("/internal/v1/merchants/" + merchantId + "/public-profile").header("X-Internal-Token", TOKEN))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.name").exists()).andReturn().getResponse().getContentAsString();
+        assertFalse(prof.contains("userId") || prof.contains("secret"), prof);
+        mvc.perform(MockMvcRequestBuilders.get("/internal/v1/merchants/" + UUID.randomUUID() + "/public-profile").header("X-Internal-Token", TOKEN)).andExpect(status().is4xxClientError());
         // the merchant admin can read their own activity log; developers and other merchants cannot
         get(u, "MERCHANT_ADMIN", "/api/v1/audit-events").andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(actions.size()))
                 .andExpect(jsonPath("$.data.content[0].action").exists());

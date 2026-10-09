@@ -40,6 +40,15 @@ public class InternalController {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "NO_MERCHANT", "No merchant for user"));
     }
 
+    public record PublicProfile(UUID merchantId, String name, String supportEmail, String status) {}
+
+    /** Name and support contact shown to customers on hosted pages (payment links). Nothing private. */
+    @GetMapping("/merchants/{merchantId}/public-profile")
+    ApiResponse<PublicProfile> publicProfile(@PathVariable UUID merchantId) {
+        var m = merchants.get(merchantId);
+        return ApiResponse.ok(new PublicProfile(m.getId(), m.getName(), m.getSupportEmail(), m.getStatus()));
+    }
+
     /** For the notification service only: where to deliver an event, and the secret to sign it with. */
     @GetMapping("/merchants/{merchantId}/webhook-subscribers")
     ApiResponse<List<WebhookEndpointService.Subscriber>> subscribers(@PathVariable UUID merchantId, @RequestParam String event) {
