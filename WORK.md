@@ -33,8 +33,8 @@ User communicates in Marathi/English. User asked: build the whole project per sp
 | M12 | Kafka/Redis/Notifications/DLQ | DONE (outbox->Kafka, ledger+notification consumers, DLT; email + extra Redis use deferred) |
 | M13 | Security + Observability | DONE (see docs/SECURITY.md, docs/OBSERVABILITY.md; scanning in CI is M15) |
 | M14 | Performance (JMeter) | DONE except executing the JMeter plan (download failed; plan + autocannon results in docs/PERFORMANCE.md, N+1 and API-key cache fixed) |
-| M15 | OCI + CI/CD (needs user's OCI account) | todo |
-| M16 | Release readiness | todo |
+| M15 | OCI + CI/CD (needs user's OCI account) | DONE as code/docs (Dockerfiles, compose overlays, workflows, deploy/rollback scripts); NEVER RUN on GitHub/OCI (no accounts) |
+| M16 | Release readiness | DONE (docs/RELEASE_READINESS.md lists the OPEN external items) |
 Frontend (React merchant dashboard) is built incrementally alongside M3..M11.
 
 ## Git branching rules (from user request, 2026-10-09)
@@ -54,6 +54,7 @@ Frontend (React merchant dashboard) is built incrementally alongside M3..M11.
 - PayU TEST key/salt are in `.env` (verified: PayU accepted our signature). Never print them.
 - **PENDING (user action):** one real sandbox payment through the browser. A payment (id in `.run/last-payment-id`, link in `.run/last-checkout-url`, expires 30 min) was created; if expired create a new one: register/login -> POST /api/v1/merchants -> POST /api/v1/api-keys -> POST /api/v1/orders -> POST /api/v1/payments -> POST /api/v1/payments/{id}/checkout (all with Idempotency-Key where required), open `checkoutUrl`, pay with PayU test instruments (docs/PAYU_INTEGRATION.md), land on /payment-result, then check `GET /api/v1/payments/{id}/status` (expect SUCCESS, history PENDING->PROCESSING->SUCCESS) and tables `webhook_events`, `verification_log`, `provider_attempts`.
 - Auth is RS256 now: run `bash scripts/gen-jwt-keys.sh` once (writes JWT_PRIVATE_KEY/JWT_PUBLIC_KEY into .env). Gateway health/metrics are on :8180 (not 8080). Live event-pipeline check (dev only, SIMULATES the provider result with the internal token): `bash scripts/smoke-events.sh` -> payment.success -> Kafka -> ledger + signed merchant webhook. All 9 checks passed on 2026-10-09. 12 services share one Postgres: dev-start sets Hikari pool 5 each (default 10 x 12 > max_connections 100).
+- **REAL PayU sandbox payment DONE (2026-10-09):** payment 62c0f1af... went CREATED->PENDING->PROCESSING->SUCCESS (verification worker confirmed with PayU; the real callback arrived later as a no-op), ledger CAPTURE posted. A real sandbox refund of INR 10 was ACCEPTED by PayU ("Refund Request Queued"); its status polls return `pending` (parser works on the real response); check later that it ends SUCCESS (refund 9e61d913...).
 - Tip when scripting JSON: use `grep -o '"id":"[^"]*"' | head -1` (first match); a greedy sed picked the nested customer id once.
 
 ## NEXT STEPS (in order)

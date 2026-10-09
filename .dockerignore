@@ -1,0 +1,16 @@
+# Never let secrets or local state into an image build context
+.env
+.env.*
+!.env.example
+.git
+.run
+**/target
+**/node_modules
+frontend/dist
+performance/data
+performance/results
+*.log
+*.pem
+*.key
+hs_err_pid*
+Autonomous_Payment_Gateway_Complete_Master_Implementation_Documentation.docx

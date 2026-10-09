@@ -16,13 +16,15 @@ done
 set -a; . ./.env; set +a
 # 12 services x Hikari default 10 connections would exceed Postgres max_connections (100)
 export SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE="${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE:-5}"
+# 12 JVMs on one laptop: unbounded default heaps (1/4 of RAM each) once crashed two services with "insufficient memory" (hs_err)
+export APG_JAVA_OPTS="${APG_JAVA_OPTS:--Xms64m -Xmx384m -XX:MaxMetaspaceSize=192m}"
 export APG_EVENTS_ENABLED="${APG_EVENTS_ENABLED:-true}"
 export NOTIFICATION_ALLOW_INSECURE_URLS="${NOTIFICATION_ALLOW_INSECURE_URLS:-true}"   # dev only: lets you point a webhook at http://localhost
 export MERCHANT_ALLOW_INSECURE_WEBHOOK_URLS="${MERCHANT_ALLOW_INSECURE_WEBHOOK_URLS:-true}"
 export PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-http://localhost:8080}"
 mkdir -p .run
 for s in auth-service merchant-service order-service payment-service provider-integration payment-orchestrator webhook-service refund-service ledger-service settlement-service notification-service api-gateway; do
-  nohup "$JAVA_HOME/bin/java" -jar services/$s/target/$s-0.1.0-SNAPSHOT.jar > .run/$s.log 2>&1 &
+  nohup "$JAVA_HOME/bin/java" $APG_JAVA_OPTS -jar services/$s/target/$s-0.1.0-SNAPSHOT.jar > .run/$s.log 2>&1 &
   echo "started $s"
 done
 for i in $(seq 1 80); do
