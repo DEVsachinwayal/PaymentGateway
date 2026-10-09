@@ -18,15 +18,22 @@ public class InternalSettlementController {
     public record PaidRequest(@Size(max = 100) String payoutReference) {}
 
     private final SettlementService service;
+    private final com.apg.common.audit.AuditLog audit;
 
-    public InternalSettlementController(SettlementService service) {
+    public InternalSettlementController(SettlementService service, com.apg.common.audit.AuditLog audit) {
         this.service = service;
+        this.audit = audit;
     }
 
     /** Idempotent per (provider, batchRef): same document => 200 with replayed=true; different document => 409. */
     @PostMapping("/settlements/import")
-    ApiResponse<SettlementView> importBatch(@Valid @RequestBody ImportRequest r) {
-        return ApiResponse.ok(service.importBatch(r));
+    ApiResponse<SettlementView> importBatch(@Valid @RequestBody ImportRequest r, @RequestHeader(value = "X-Operator", required = false) String op) {
+        String actor = actor(op, r.importedBy());
+        String target = r.provider() + "/" + r.batchRef();
+        audit.record(actor, null, "SETTLEMENT_IMPORT", target, "ATTEMPT", java.util.Map.of("items", r.items().size(), "declaredNet", r.declaredNet()));
+        SettlementView v = service.importBatch(r);
+        audit.record(actor, null, "SETTLEMENT_IMPORT", target, "SUCCESS", java.util.Map.of("settlementId", v.id().toString(), "status", v.status(), "replayed", v.replayed()));
+        return ApiResponse.ok(v);
     }
 
     @PostMapping("/settlements/{id}/reconcile")
@@ -56,12 +63,30 @@ public class InternalSettlementController {
 
     /** INVESTIGATING needs an owner; RESOLVED / WRITTEN_OFF need notes. Closed exceptions keep their evidence. */
     @PatchMapping("/exceptions/{id}")
-    ApiResponse<ExceptionView> updateException(@PathVariable UUID id, @Valid @RequestBody ExceptionUpdate u) {
-        return ApiResponse.ok(service.updateException(id, u.status(), u.owner(), u.notes()));
+    ApiResponse<ExceptionView> updateException(@PathVariable UUID id, @Valid @RequestBody ExceptionUpdate u,
+                                               @RequestHeader(value = "X-Operator", required = false) String op) {
+        String actor = actor(op, u.owner());
+        java.util.Map<String, Object> details = new java.util.LinkedHashMap<>();
+        details.put("status", u.status());
+        details.put("notes", u.notes());
+        audit.record(actor, null, "RECON_EXCEPTION_UPDATE", id.toString(), "ATTEMPT", details);
+        ExceptionView v = service.updateException(id, u.status(), u.owner(), u.notes());
+        audit.record(actor, null, "RECON_EXCEPTION_UPDATE", id.toString(), "SUCCESS", details);
+        return ApiResponse.ok(v);
     }
 
     @PostMapping("/merchant-settlements/{id}/paid")
-    ApiResponse<MerchantSettlementView> paid(@PathVariable UUID id, @Valid @RequestBody PaidRequest r) {
-        return ApiResponse.ok(service.markPaid(id, r.payoutReference()));
+    ApiResponse<MerchantSettlementView> paid(@PathVariable UUID id, @Valid @RequestBody PaidRequest r,
+                                             @RequestHeader(value = "X-Operator", required = false) String op) {
+        String actor = actor(op, null);
+        audit.record(actor, null, "PAYOUT_MARK_PAID", id.toString(), "ATTEMPT", java.util.Map.of("payoutReference", String.valueOf(r.payoutReference())));
+        MerchantSettlementView v = service.markPaid(id, r.payoutReference());
+        audit.record(actor, v.merchantId(), "PAYOUT_MARK_PAID", id.toString(), "SUCCESS", java.util.Map.of("net", v.net(), "payoutReference", v.payoutReference()));
+        return ApiResponse.ok(v);
+    }
+
+    private static String actor(String header, String fallback) {
+        String who = header != null && !header.isBlank() ? header : (fallback != null && !fallback.isBlank() ? fallback : "unspecified");
+        return "ops:" + who;
     }
 }

@@ -17,9 +17,11 @@ import org.springframework.web.bind.annotation.*;
 public class WebhookDeliveryController {
     private static final Set<String> STATUSES = Set.of("PENDING", "RETRYING", "DELIVERED", "DEAD", "CANCELLED");
     private final NotificationService service;
+    private final com.apg.common.audit.AuditLog audit;
 
-    public WebhookDeliveryController(NotificationService service) {
+    public WebhookDeliveryController(NotificationService service, com.apg.common.audit.AuditLog audit) {
         this.service = service;
+        this.audit = audit;
     }
 
     private static UUID merchantOf(CallerContext c, boolean write) {
@@ -43,7 +45,10 @@ public class WebhookDeliveryController {
 
     /** Starts a new delivery cycle for the same event (same event id, so receivers can de-duplicate). */
     @PostMapping("/{id}/resend")
+    @org.springframework.transaction.annotation.Transactional
     ApiResponse<JobView> resend(CallerContext c, @PathVariable UUID id) {
-        return ApiResponse.ok(service.resend(merchantOf(c, true), id));
+        JobView v = service.resend(merchantOf(c, true), id);
+        audit.record(c, "WEBHOOK_DELIVERY_RESEND", id.toString(), "SUCCESS", java.util.Map.of("eventType", v.eventType()));
+        return ApiResponse.ok(v);
     }
 }

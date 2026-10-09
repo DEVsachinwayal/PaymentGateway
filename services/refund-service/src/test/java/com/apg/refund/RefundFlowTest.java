@@ -325,6 +325,22 @@ class RefundFlowTest {
         mvc.perform(MockMvcRequestBuilders.get("/internal/v1/refunds/by-reference/" + ref)).andExpect(status().isUnauthorized());
     }
 
+    @Test void creatingAndResolvingRefundsIsAudited() throws Exception {
+        FakePeers.Payment p = peers.addPayment(merchant, 6000, "SUCCESS");
+        peers.defaultRefundAnswer = "UNKNOWN";
+        UUID id;
+        try {
+            id = create(p, null);
+        } finally {
+            peers.defaultRefundAnswer = "ACCEPTED";
+        }
+        assertEquals(1, jdbc.queryForObject("select count(*) from audit_events where action = 'REFUND_CREATED' and target = ? and merchant_id = ?", Integer.class, id.toString(), merchant));
+        mvc.perform(MockMvcRequestBuilders.post("/internal/v1/refunds/" + id + "/resolve").header("X-Internal-Token", TOKEN).header("X-Operator", "finance-7")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"FAILED\",\"note\":\"checked PayU\"}")).andExpect(status().isOk());
+        assertEquals(java.util.List.of("ATTEMPT", "SUCCESS"), jdbc.queryForList("select outcome from audit_events where action = 'REFUND_RESOLVE' and target = ? order by occurred_at, id", String.class, id.toString()));
+        assertEquals("ops:finance-7", jdbc.queryForObject("select actor from audit_events where action = 'REFUND_RESOLVE' and target = ? limit 1", String.class, id.toString()));
+    }
+
     @Test void listIsPagedAndFilterable() throws Exception {
         UUID m = UUID.randomUUID();
         FakePeers.Payment p = peers.addPayment(m, 9000, "SUCCESS");

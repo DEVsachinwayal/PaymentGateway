@@ -24,8 +24,10 @@ public class RefundController {
     private final RefundService refunds;
     private final IdempotencyService idempotency;
     private final ObjectMapper mapper;
+    private final com.apg.common.audit.AuditLog audit;
 
-    public RefundController(RefundService refunds, IdempotencyService idempotency, ObjectMapper mapper) {
+    public RefundController(RefundService refunds, IdempotencyService idempotency, ObjectMapper mapper, com.apg.common.audit.AuditLog audit) {
+        this.audit = audit;
         this.refunds = refunds;
         this.idempotency = idempotency;
         this.mapper = mapper;
@@ -47,7 +49,11 @@ public class RefundController {
                                                  @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                                  @Valid @RequestBody CreateRefundRequest body) throws Exception {
         UUID merchantId = merchantOf(c, true);
-        Outcome out = idempotency.execute(merchantId, key, body, 202, () -> refunds.create(merchantId, body));
+        Outcome out = idempotency.execute(merchantId, key, body, 202, () -> {
+            RefundView v = refunds.create(merchantId, body);       // same transaction as the idempotency marker
+            audit.record(c, "REFUND_CREATED", v.id().toString(), "SUCCESS", java.util.Map.of("paymentId", body.paymentId().toString(), "amount", v.amount()));
+            return v;
+        });
         JsonNode view = mapper.readTree(out.body());
         if (!out.replay()) refunds.afterCreate(UUID.fromString(view.path("id").asText()));
         ResponseEntity.BodyBuilder b = ResponseEntity.status(out.status());

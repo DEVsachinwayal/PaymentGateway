@@ -21,8 +21,10 @@ public class MerchantController {
     private final MerchantService merchants;
     private final ApiKeyService apiKeys;
     private final WebhookEndpointService webhooks;
+    private final com.apg.common.audit.AuditLog audit;
 
-    public MerchantController(MerchantService merchants, ApiKeyService apiKeys, WebhookEndpointService webhooks) {
+    public MerchantController(MerchantService merchants, ApiKeyService apiKeys, WebhookEndpointService webhooks, com.apg.common.audit.AuditLog audit) {
+        this.audit = audit;
         this.merchants = merchants;
         this.apiKeys = apiKeys;
         this.webhooks = webhooks;
@@ -37,10 +39,12 @@ public class MerchantController {
     // ---- merchant ----
     @PostMapping("/api/v1/merchants")
     @ResponseStatus(HttpStatus.CREATED)
+    @org.springframework.transaction.annotation.Transactional
     ApiResponse<MerchantView> create(CallerContext c, @Valid @RequestBody CreateMerchantRequest r) {
         c.requireAnyRole(ADMIN);
         Merchant m = merchants.create(c.userId(), r.name(), r.legalName(), r.supportEmail(),
                 r.defaultCurrency() == null ? "INR" : r.defaultCurrency());
+        audit.record(auditCtx(c, m.getId()), "MERCHANT_CREATED", m.getId().toString(), "SUCCESS", java.util.Map.of("name", r.name()));
         return ApiResponse.ok(MerchantView.of(m, merchants.getSettings(m.getId())));
     }
 
@@ -58,18 +62,25 @@ public class MerchantController {
     }
 
     @PutMapping("/api/v1/merchants/me/settings")
+    @org.springframework.transaction.annotation.Transactional
     ApiResponse<SettingsView> updateSettings(CallerContext c, @Valid @RequestBody SettingsRequest r) {
         c.requireAnyRole(ADMIN);
         List<String> urls = r.allowedReturnUrls() == null ? List.of() : r.allowedReturnUrls();
-        return ApiResponse.ok(SettingsView.of(merchants.updateSettings(merchantOf(c), r.defaultCurrency(), String.join("\n", urls))));
+        UUID mid = merchantOf(c);
+        var view = SettingsView.of(merchants.updateSettings(mid, r.defaultCurrency(), String.join("\n", urls)));
+        audit.record(auditCtx(c, mid), "MERCHANT_SETTINGS_UPDATED", mid.toString(), "SUCCESS", java.util.Map.of("returnUrls", urls.size(), "currency", r.defaultCurrency()));
+        return ApiResponse.ok(view);
     }
 
     // ---- API keys ----
     @PostMapping("/api/v1/api-keys")
     @ResponseStatus(HttpStatus.CREATED)
+    @org.springframework.transaction.annotation.Transactional
     ApiResponse<ApiKeyView> createKey(CallerContext c, @Valid @RequestBody CreateApiKeyRequest r) {
         c.requireAnyRole(ADMIN);
-        Created k = apiKeys.create(merchantOf(c), r.label(), r.mode());
+        UUID mid = merchantOf(c);
+        Created k = apiKeys.create(mid, r.label(), r.mode());
+        audit.record(auditCtx(c, mid), "API_KEY_CREATED", k.key().getKeyId(), "SUCCESS", java.util.Map.of("mode", r.mode(), "label", r.label()));
         return ApiResponse.ok(ApiKeyView.of(k.key(), k.fullKey()));
     }
 
@@ -81,25 +92,34 @@ public class MerchantController {
 
     @PostMapping("/api/v1/api-keys/{id}/rotate")
     @ResponseStatus(HttpStatus.CREATED)
+    @org.springframework.transaction.annotation.Transactional
     ApiResponse<ApiKeyView> rotate(CallerContext c, @PathVariable UUID id, @Valid @RequestBody(required = false) RotateRequest r) {
         c.requireAnyRole(ADMIN);
-        Created k = apiKeys.rotate(merchantOf(c), id, r == null ? null : r.graceHours());
+        UUID mid = merchantOf(c);
+        Created k = apiKeys.rotate(mid, id, r == null ? null : r.graceHours());
+        audit.record(auditCtx(c, mid), "API_KEY_ROTATED", id.toString(), "SUCCESS", java.util.Map.of("newKey", k.key().getKeyId(), "graceHours", r == null || r.graceHours() == null ? 24 : r.graceHours()));
         return ApiResponse.ok(ApiKeyView.of(k.key(), k.fullKey()));
     }
 
     @DeleteMapping("/api/v1/api-keys/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @org.springframework.transaction.annotation.Transactional
     void revoke(CallerContext c, @PathVariable UUID id) {
         c.requireAnyRole(ADMIN);
-        apiKeys.revoke(merchantOf(c), id);
+        UUID mid = merchantOf(c);
+        apiKeys.revoke(mid, id);
+        audit.record(auditCtx(c, mid), "API_KEY_REVOKED", id.toString(), "SUCCESS", null);
     }
 
     // ---- webhook endpoints ----
     @PostMapping("/api/v1/webhook-endpoints")
     @ResponseStatus(HttpStatus.CREATED)
+    @org.springframework.transaction.annotation.Transactional
     ApiResponse<WebhookView> createWebhook(CallerContext c, @Valid @RequestBody CreateWebhookRequest r) {
         c.requireAnyRole(ADMIN);
-        var created = webhooks.create(merchantOf(c), r.url(), r.events());
+        UUID mid = merchantOf(c);
+        var created = webhooks.create(mid, r.url(), r.events());
+        audit.record(auditCtx(c, mid), "WEBHOOK_ENDPOINT_CREATED", created.endpoint().getId().toString(), "SUCCESS", java.util.Map.of("host", java.net.URI.create(r.url()).getHost(), "events", r.events()));
         return ApiResponse.ok(WebhookView.of(created.endpoint(), created.signingSecret()));
     }
 
@@ -111,8 +131,16 @@ public class MerchantController {
 
     @DeleteMapping("/api/v1/webhook-endpoints/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @org.springframework.transaction.annotation.Transactional
     void deleteWebhook(CallerContext c, @PathVariable UUID id) {
         c.requireAnyRole(ADMIN);
-        webhooks.delete(merchantOf(c), id);
+        UUID mid = merchantOf(c);
+        webhooks.delete(mid, id);
+        audit.record(auditCtx(c, mid), "WEBHOOK_ENDPOINT_DELETED", id.toString(), "SUCCESS", null);
+    }
+
+    /** For a dashboard user the merchant is derived server-side, so the audit record gets it explicitly. */
+    private static CallerContext auditCtx(CallerContext c, UUID merchantId) {
+        return new CallerContext(c.userId(), merchantId, c.roles(), c.authType());
     }
 }
