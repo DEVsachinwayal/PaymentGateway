@@ -300,6 +300,16 @@ public class RefundService {
         return new PageView<>(rows, pg, s, total == null ? 0 : total);
     }
 
+    /** For reconciliation (operators/settlement-service): finds a refund by the token we sent to the provider. */
+    public record Lookup(UUID refundId, UUID merchantId, UUID paymentId, long amount, String currency, String status, String provider) {}
+
+    public Lookup lookupByReference(String reference) {
+        return jdbc.query("SELECT * FROM refunds WHERE refund_reference = ?", (rs, i) -> new Lookup(rs.getObject("id", UUID.class),
+                rs.getObject("merchant_id", UUID.class), rs.getObject("payment_id", UUID.class), rs.getLong("amount"),
+                rs.getString("currency"), rs.getString("status"), rs.getString("provider")), reference).stream().findFirst()
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "REFUND_NOT_FOUND", "Refund not found"));
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private Row row(UUID id) {

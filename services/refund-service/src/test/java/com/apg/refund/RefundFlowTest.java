@@ -314,6 +314,17 @@ class RefundFlowTest {
         assertEquals(8000L, jdbc.queryForObject("select coalesce(sum(amount),0) from refunds where payment_id = ? and status <> 'FAILED'", Long.class, p.id()));
     }
 
+    @Test void reconciliationCanFindARefundByItsProviderToken() throws Exception {
+        FakePeers.Payment p = peers.addPayment(merchant, 2000, "SUCCESS");
+        UUID id = create(p, 700L);
+        String ref = jdbc.queryForObject("select refund_reference from refunds where id = ?", String.class, id);
+        mvc.perform(MockMvcRequestBuilders.get("/internal/v1/refunds/by-reference/" + ref).header("X-Internal-Token", TOKEN))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.refundId").value(id.toString()))
+                .andExpect(jsonPath("$.data.amount").value(700)).andExpect(jsonPath("$.data.merchantId").value(merchant.toString()));
+        mvc.perform(MockMvcRequestBuilders.get("/internal/v1/refunds/by-reference/RFnope").header("X-Internal-Token", TOKEN)).andExpect(status().isNotFound());
+        mvc.perform(MockMvcRequestBuilders.get("/internal/v1/refunds/by-reference/" + ref)).andExpect(status().isUnauthorized());
+    }
+
     @Test void listIsPagedAndFilterable() throws Exception {
         UUID m = UUID.randomUUID();
         FakePeers.Payment p = peers.addPayment(m, 9000, "SUCCESS");
