@@ -51,6 +51,17 @@ public class WebhookEndpointService {
         return repo.findByMerchantIdAndStatusOrderByCreatedAtDesc(merchantId, "ACTIVE");
     }
 
+    public record Subscriber(UUID id, String url, String signingSecret) {}
+
+    /** Internal use (notification service): active endpoints of a merchant subscribed to the event, with the signing secret. */
+    @Transactional(readOnly = true)
+    public List<Subscriber> subscribers(UUID merchantId, String event) {
+        return repo.findByMerchantIdAndStatusOrderByCreatedAtDesc(merchantId, "ACTIVE").stream()
+                .filter(e -> List.of(e.getEvents().split(",")).contains(event))
+                .map(e -> new Subscriber(e.getId(), e.getUrl(), crypto.decrypt(e.getSecretEnc())))
+                .toList();
+    }
+
     public void delete(UUID merchantId, UUID id) {
         repo.findByIdAndMerchantId(id, merchantId)
                 .filter(e -> "ACTIVE".equals(e.getStatus()))

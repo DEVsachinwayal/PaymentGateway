@@ -4,8 +4,10 @@ import com.apg.common.api.ApiException;
 import com.apg.common.api.ApiResponse;
 import com.apg.merchant.service.ApiKeyService;
 import com.apg.merchant.service.MerchantService;
+import com.apg.merchant.service.WebhookEndpointService;
 import com.apg.merchant.web.MerchantDtos.*;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -16,10 +18,12 @@ import org.springframework.web.bind.annotation.*;
 public class InternalController {
     private final ApiKeyService apiKeys;
     private final MerchantService merchants;
+    private final WebhookEndpointService webhooks;
 
-    public InternalController(ApiKeyService apiKeys, MerchantService merchants) {
+    public InternalController(ApiKeyService apiKeys, MerchantService merchants, WebhookEndpointService webhooks) {
         this.apiKeys = apiKeys;
         this.merchants = merchants;
+        this.webhooks = webhooks;
     }
 
     @PostMapping("/api-keys/verify")
@@ -34,5 +38,11 @@ public class InternalController {
         return merchants.merchantIdForUser(userId)
                 .map(id -> ApiResponse.ok(new MerchantRef(id)))
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "NO_MERCHANT", "No merchant for user"));
+    }
+
+    /** For the notification service only: where to deliver an event, and the secret to sign it with. */
+    @GetMapping("/merchants/{merchantId}/webhook-subscribers")
+    ApiResponse<List<WebhookEndpointService.Subscriber>> subscribers(@PathVariable UUID merchantId, @RequestParam String event) {
+        return ApiResponse.ok(webhooks.subscribers(merchantId, event));
     }
 }

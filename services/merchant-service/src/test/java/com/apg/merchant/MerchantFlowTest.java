@@ -178,6 +178,18 @@ class MerchantFlowTest {
 
         String list = get(u, "MERCHANT_ADMIN", "/api/v1/webhook-endpoints").andReturn().getResponse().getContentAsString();
         assertFalse(list.contains(secret));
+
+        // the notification service can fetch subscribers (with the real signing secret) for one event; the gateway never routes this
+        UUID merchantId = UUID.fromString(jdbc.queryForObject("select merchant_id::text from webhook_endpoints where id = ?::uuid", String.class, w.at("/data/id").asText()));
+        JsonNode subs = body(mvc.perform(MockMvcRequestBuilders.get("/internal/v1/merchants/" + merchantId + "/webhook-subscribers?event=refund.success")
+                .header("X-Internal-Token", TOKEN)).andExpect(status().isOk()));
+        assertEquals(1, subs.at("/data").size());
+        assertEquals(secret, subs.at("/data/0/signingSecret").asText());
+        assertEquals("https://shop.com/h", subs.at("/data/0/url").asText());
+        assertEquals(0, body(mvc.perform(MockMvcRequestBuilders.get("/internal/v1/merchants/" + merchantId + "/webhook-subscribers?event=payment.failed")
+                .header("X-Internal-Token", TOKEN)).andExpect(status().isOk())).at("/data").size(), "not subscribed to this event");
+        mvc.perform(MockMvcRequestBuilders.get("/internal/v1/merchants/" + merchantId + "/webhook-subscribers?event=refund.success"))
+                .andExpect(status().isUnauthorized());
         delete(u, "MERCHANT_ADMIN", "/api/v1/webhook-endpoints/" + w.at("/data/id").asText()).andExpect(status().isNoContent());
         assertFalse(get(u, "MERCHANT_ADMIN", "/api/v1/webhook-endpoints").andReturn().getResponse().getContentAsString()
                 .contains(w.at("/data/id").asText()));
