@@ -116,3 +116,9 @@
 - ledger-service (8089, DB apg_ledger): accounts/transactions/entries with DB-enforced immutability + balance; payment.success and refund.success postings; reversal; merchant balance/transactions API; trial balance. Tests 11/11.
 - payment + refund events now carry `provider`; gateway route /api/v1/ledger/** (dashboard users only); dev-start starts ledger-service.
 - Delivery of events to the ledger is M12 (Kafka); until then POST /internal/v1/ledger/events.
+
+## 2026-10-09 – M11 settlement-service (branch feature/settlement-service) + ledger settlement posting + gateway route
+- settlement-service (8090, DB apg_settlement): import (idempotent, hashed immutable evidence), reconciliation (7 finding types, rerunnable, exception workflow), merchant shares, evidence-based payout status, outbox settlement.created / reconciliation.exception. Tests 10/10.
+- refund-service: GET /internal/v1/refunds/by-reference/{token} (tests 13/13). ledger-service: settlement.created posting (tests 12/12).
+- api-gateway: /api/v1/settlements/** route (+test, tests 14/14). dev-start.sh starts settlement-service.
+- Not built: automatic PayU settlement fetch (external), "missing in settlement" detection, dashboard screens for refunds/settlements/ledger.

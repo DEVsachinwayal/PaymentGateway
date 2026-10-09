@@ -104,6 +104,7 @@ class GatewayFlowTest {
         r.add("apg.gateway.webhook-uri", () -> url);
         r.add("apg.gateway.refund-uri", () -> url);
         r.add("apg.gateway.ledger-uri", () -> url);
+        r.add("apg.gateway.settlement-uri", () -> url);
         r.add("apg.gateway.internal-token", () -> "internal-token-for-tests-123");
         r.add("apg.gateway.rate-limit.replenish-per-second", () -> 1);
         r.add("apg.gateway.rate-limit.burst", () -> 3);
@@ -210,6 +211,17 @@ class GatewayFlowTest {
                 .expectBody().jsonPath("$.error.code").isEqualTo("FORBIDDEN_FOR_API_KEY");
         web.get().uri("/api/v1/ledger/balance").header("Authorization", "Bearer " + token("u-ledger", List.of("MERCHANT_ADMIN"), Instant.now().plusSeconds(60), KEY))
                 .exchange().expectStatus().isOk().expectBody().jsonPath("$.path").isEqualTo("/api/v1/ledger/balance");
+    }
+
+    @Test @Order(2)
+    void settlementsAreForDashboardUsersOnlyAndInternalApisAreNotRouted() {
+        web.get().uri("/api/v1/settlements").exchange().expectStatus().isUnauthorized();
+        web.get().uri("/api/v1/settlements").header("X-Api-Key", "sk_test_good.secret").exchange().expectStatus().isForbidden();
+        web.get().uri("/api/v1/settlements").header("Authorization", "Bearer " + token("u-settle", List.of("MERCHANT_ADMIN"), Instant.now().plusSeconds(60), KEY))
+                .exchange().expectStatus().isOk().expectBody().jsonPath("$.path").isEqualTo("/api/v1/settlements");
+        // operator-only APIs live under /internal and must never be reachable through the gateway
+        web.get().uri("/internal/v1/settlements").header("Authorization", "Bearer " + token("u-settle", List.of("MERCHANT_ADMIN"), Instant.now().plusSeconds(60), KEY))
+                .exchange().expectStatus().isNotFound();
     }
 
     @Test @Order(2)
