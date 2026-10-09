@@ -1,0 +1,54 @@
+server:
+  port: 8091
+
+spring:
+  application:
+    name: notification-service
+  datasource:
+    url: ${NOTIFICATION_DB_URL:jdbc:postgresql://localhost:5433/apg_notification}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  jackson:
+    deserialization:
+      accept-float-as-int: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:                       # only used to park poison events on the dead-letter topics
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+apg:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN}
+  events:
+    consumer:
+      enabled: ${APG_EVENTS_ENABLED:false}
+  notification:
+    merchant-service-uri: ${MERCHANT_SERVICE_URI:http://localhost:8082}
+    # dev/test only: allow http and private addresses as webhook targets. NEVER true in production.
+    allow-insecure-urls: ${NOTIFICATION_ALLOW_INSECURE_URLS:false}
+    max-attempts: 8
+    base-delay: 10s
+    max-delay: 1h
+    request-timeout: 10s
+    worker:
+      enabled: true
+      interval: 2s
+      batch-size: 20
