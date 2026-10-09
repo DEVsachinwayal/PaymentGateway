@@ -12,6 +12,19 @@ spring:
     deserialization:
       accept-float-as-int: false
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:                       # only used to park poison events on the dead-letter topics
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: ledger-service
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
 management:
   endpoints:
     web:
@@ -23,6 +36,9 @@ management:
         enabled: true
 
 apg:
+  events:
+    consumer:
+      enabled: ${APG_EVENTS_ENABLED:false}
   internal:
     token: ${INTERNAL_SERVICE_TOKEN}
   ledger:
