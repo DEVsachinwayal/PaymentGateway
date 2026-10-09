@@ -46,6 +46,11 @@ class OutboxPublisherTest {
                 payload TEXT NOT NULL, occurred_at TIMESTAMPTZ NOT NULL, published_at TIMESTAMPTZ)""");
     }
 
+    @org.junit.jupiter.api.BeforeEach
+    void cleanOutbox() {
+        jdbc.update("DELETE FROM outbox_events");     // tests share one table; publishBatch sends everything unpublished
+    }
+
     @AfterAll
     static void stop() {
         kafka.stop();

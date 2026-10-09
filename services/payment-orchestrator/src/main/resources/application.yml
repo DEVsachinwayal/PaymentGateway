@@ -33,7 +33,8 @@ apg:
     payment-service-uri: ${PAYMENT_SERVICE_URI:http://localhost:8084}
     provider-service-uri: ${PROVIDER_SERVICE_URI:http://localhost:8085}
     verification:
-      enabled: true
+      # load tests turn this off so synthetic PROCESSING payments never trigger real PayU verify calls
+      enabled: ${ORCHESTRATOR_VERIFICATION_ENABLED:true}
       interval: 30s
       min-age: 60s            # only look at payments untouched for this long
       processing-timeout: 15m # provider still says pending after this => VERIFY_REQUIRED

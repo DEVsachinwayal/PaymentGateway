@@ -45,5 +45,6 @@ apg:
     cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
     max-request-bytes: 262144
     rate-limit:
-      replenish-per-second: 10
-      burst: 20
+      # per client address; raise for load tests (scripts/perf-start.sh), keep low in production
+      replenish-per-second: ${GATEWAY_RATE_LIMIT_RPS:10}
+      burst: ${GATEWAY_RATE_LIMIT_BURST:20}

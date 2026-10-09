@@ -52,7 +52,8 @@ class MetricsTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"paymentId\":\"" + p.id() + "\"}")).andExpect(status().isAccepted());
 
         String text = mvc.perform(MockMvcRequestBuilders.get("/actuator/prometheus")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-        assertTrue(text.contains("apg_refund_total{status=\"CREATED\""), "refund counter");
+        assertTrue(java.util.regex.Pattern.compile("apg_refund_total\\{[^}]*status=\"CREATED\"[^}]*\\}").matcher(text).find(), "refund counter");
+        assertTrue(text.contains("application=\"refund-service\""), "every metric is tagged with the service name");
         assertTrue(text.contains("apg_refund_in_flight"), "in-flight gauge");
         assertTrue(text.contains("apg_refund_verify_required"), "verify-required gauge");
         assertTrue(text.contains("jvm_memory_used_bytes") && text.contains("http_server_requests_seconds"), "platform metrics");
