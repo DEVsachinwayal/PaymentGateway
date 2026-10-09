@@ -1,19 +1,25 @@
 # TODO
-## Pending milestones
-M2 Gateway+Auth, M3 Merchant, M4 Order, M5 Payment, M6 Orchestration, M7 Provider+PayU, M8 Webhook, M9 Refund, M10 Ledger, M11 Settlement/Recon, M12 Kafka/Redis/Notifications, M13 Security/Observability, M14 Performance, M15 OCI/CI-CD, M16 Release readiness.
-## EXTERNAL DEPENDENCIES (not done, user/provider must supply)
-- PayU sandbox key/salt (needed at M7)
-- PayU production onboarding, KYC, production URLs
-- OCI account/billing, domain, TLS certificate
-- Email/SMS provider (if used), PCI/compliance assessment, banking/acquirer agreements
-## Open items
-- [ ] Structured JSON logging config (add with first service, logback + MDC correlationId)
-- [ ] Admin API to grant APG_OPERATIONS/APG_FINANCE/SYSTEM_ADMIN roles (auth-service)
-- [ ] Rate limiter key from X-Forwarded-For behind OCI LB (M15)
-- [ ] Move JWT to asymmetric keys / JWKS (M13)
-- [ ] Gateway: structured JSON logs (M13)
-- [ ] Frontend (React dashboard): login, API keys, webhook endpoints, orders — not started
-- [ ] Team management: add MERCHANT_DEVELOPER users to a merchant (merchant_users supports it, no API yet)
-- [ ] Ops API to activate merchants (SANDBOX -> ACTIVE) after KYC (EXTERNAL DEPENDENCY)
-- [ ] Re-validate webhook URL resolved IP at delivery time (M12)
-- [ ] Short Redis cache for API key verification (M12/M14)
+
+## EXTERNAL DEPENDENCIES (not code: you / providers / legal must supply)
+- PayU sandbox key/salt: DONE (in local .env). PayU **live** onboarding, KYC, production URLs and the settlement API/report access.
+- Legal/regulatory position for holding other merchants' funds (RBI payment aggregator rules) or a licensed partner agreement; PCI-DSS scoping; banking/acquirer agreements.
+- OCI tenancy + billing, domain, TLS certificate, OCIR + Vault + managed Postgres/Redis/Streaming decisions (docs/ORACLE_CLOUD.md).
+- GitHub repository + secrets for CI/CD (docs/CI_CD.md); optional NVD API key.
+- Email/SMS provider if email notifications are wanted (only the webhook channel exists).
+- Business decisions: fee schedule (placeholder 0), GST on fees, refund fee policy, settlement schedule, chargeback handling, data retention.
+
+## Engineering backlog (ordered roughly by value)
+- [ ] Dashboard screens: refunds, settlements, ledger statement, webhook delivery history + resend, activity log, test-mode toggle (APIs exist)
+- [ ] Execute the JMeter plan (needs JMeter installed); soak test; repeat on OCI-sized hardware
+- [ ] Confirm PayU `check_action_status` success mapping when the sandbox refund flips from pending (first poll returned "pending" = PROCESSING)
+- [ ] Operator access: authenticated ops API/UI, grant APG_OPERATIONS/APG_FINANCE roles, activate merchants (SANDBOX -> ACTIVE) after KYC, 2-person approval for ledger reversals
+- [ ] Least-privilege DB roles (migration role vs runtime role); mTLS or mesh between services
+- [ ] Team management (add MERCHANT_DEVELOPER users to a merchant: `merchant_users` supports it, no API)
+- [ ] Settlement: automatic PayU fetch adapter, "missing in settlement" detection, payout posting in the ledger when a merchant payout is marked PAID
+- [ ] Merchant `allowedReturnUrls` enforcement on payment `returnUrl`; require customer email in production
+- [ ] Provider failover when a second provider exists (D24); provider health-based routing
+- [ ] Refactor duplicated internal HTTP client plumbing (RestClient setup repeated in 7 services) into apg-common
+- [ ] Email channel + notification templates (needs a provider)
+- [ ] Rate limiting per API key/merchant (today per client address); Redis cache for provider health
+- [ ] Image signing/SBOM; staging environment; migration dry-run job
+- [ ] Phase 2 products (outside the spec): payment links, invoices, QR, subscriptions

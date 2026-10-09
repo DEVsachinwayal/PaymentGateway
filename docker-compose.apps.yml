@@ -1,0 +1,233 @@
+# Full stack in containers: docker compose -f docker-compose.yml -f docker-compose.apps.yml up -d --build
+# Production-like: only the dashboard (nginx) is published; every backend port stays on the internal network.
+# Each container receives ONLY the secrets it needs (no blanket env_file). Values come from .env / the deploy environment.
+x-app-env: &app-env
+  SPRING_PROFILES_ACTIVE: prod            # structured JSON logs
+  KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+  APG_EVENTS_ENABLED: "true"
+  REDIS_HOST: redis
+  AUTH_SERVICE_URI: http://auth-service:8081
+  MERCHANT_SERVICE_URI: http://merchant-service:8082
+  ORDER_SERVICE_URI: http://order-service:8083
+  PAYMENT_SERVICE_URI: http://payment-service:8084
+  PROVIDER_SERVICE_URI: http://provider-integration:8085
+  ORCHESTRATOR_SERVICE_URI: http://payment-orchestrator:8086
+  WEBHOOK_SERVICE_URI: http://webhook-service:8087
+  REFUND_SERVICE_URI: http://refund-service:8088
+  LEDGER_SERVICE_URI: http://ledger-service:8089
+  SETTLEMENT_SERVICE_URI: http://settlement-service:8090
+  NOTIFICATION_SERVICE_URI: http://notification-service:8091
+
+services:
+  kafka:
+    environment:                          # add a listener for other containers (the base file only serves the host)
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,INTERNAL://:19092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
+
+  api-gateway:
+    build:
+      context: .
+      args: {SERVICE: api-gateway, PORT: "8080", HEALTH_PORT: "8180"}
+    image: apg/api-gateway:${APG_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      redis: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?set JWT_PUBLIC_KEY in the environment}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in the environment}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in the environment}
+      GATEWAY_MANAGEMENT_PORT: "8180"
+      CORS_ALLOWED_ORIGINS: ${APG_PUBLIC_URL:-http://localhost:8000}
+
+  auth-service:
+    build:
+      context: .
+      args: {SERVICE: auth-service, PORT: "8081", HEALTH_PORT: "8081"}
+    image: apg/auth-service:${APG_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      AUTH_DB_URL: jdbc:postgresql://postgres:5432/apg_auth
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:?set JWT_PRIVATE_KEY in the environment}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in the environment}
+
+  merchant-service:
+    build:
+      context: .
+      args: {SERVICE: merchant-service, PORT: "8082", HEALTH_PORT: "8082"}
+    image: apg/merchant-service:${APG_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      MERCHANT_DB_URL: jdbc:postgresql://postgres:5432/apg_merchant
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      API_KEY_HASH_PEPPER: ${API_KEY_HASH_PEPPER:?set API_KEY_HASH_PEPPER in the environment}
+      WEBHOOK_SECRET_KEY: ${WEBHOOK_SECRET_KEY:?set WEBHOOK_SECRET_KEY in the environment}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in the environment}
+
+  order-service:
+    build:
+      context: .
+      args: {SERVICE: order-service, PORT: "8083", HEALTH_PORT: "8083"}
+    image: apg/order-service:${APG_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      ORDER_DB_URL: jdbc:postgresql://postgres:5432/apg_order
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in the environment}
+
+  payment-service:
+    build:
+      context: .
+      args: {SERVICE: payment-service, PORT: "8084", HEALTH_PORT: "8084"}
+    image: apg/payment-service:${APG_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      PAYMENT_DB_URL: jdbc:postgresql://postgres:5432/apg_payment
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in the environment}
+
+  provider-integration:
+    build:
+      context: .
+      args: {SERVICE: provider-integration, PORT: "8085", HEALTH_PORT: "8085"}
+    image: apg/provider-integration:${APG_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      PROVIDER_DB_URL: jdbc:postgresql://postgres:5432/apg_provider
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PAYU_MERCHANT_KEY: ${PAYU_MERCHANT_KEY:?set PAYU_MERCHANT_KEY in the environment}
+      PAYU_MERCHANT_SALT: ${PAYU_MERCHANT_SALT:?set PAYU_MERCHANT_SALT in the environment}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in the environment}
+      PAYU_BASE_URL: ${PAYU_BASE_URL:-https://test.payu.in}
+
+  payment-orchestrator:
+    build:
+      context: .
+      args: {SERVICE: payment-orchestrator, PORT: "8086", HEALTH_PORT: "8086"}
+    image: apg/payment-orchestrator:${APG_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      ORCHESTRATOR_DB_URL: jdbc:postgresql://postgres:5432/apg_orchestrator
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      CHECKOUT_TOKEN_SECRET: ${CHECKOUT_TOKEN_SECRET:?set CHECKOUT_TOKEN_SECRET in the environment}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in the environment}
+      PUBLIC_BASE_URL: ${APG_PUBLIC_URL:-http://localhost:8000}      # where customers and the provider reach the gateway
+
+  webhook-service:
+    build:
+      context: .
+      args: {SERVICE: webhook-service, PORT: "8087", HEALTH_PORT: "8087"}
+    image: apg/webhook-service:${APG_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      WEBHOOK_DB_URL: jdbc:postgresql://postgres:5432/apg_webhook
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in the environment}
+
+  refund-service:
+    build:
+      context: .
+      args: {SERVICE: refund-service, PORT: "8088", HEALTH_PORT: "8088"}
+    image: apg/refund-service:${APG_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      REFUND_DB_URL: jdbc:postgresql://postgres:5432/apg_refund
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in the environment}
+
+  ledger-service:
+    build:
+      context: .
+      args: {SERVICE: ledger-service, PORT: "8089", HEALTH_PORT: "8089"}
+    image: apg/ledger-service:${APG_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      LEDGER_DB_URL: jdbc:postgresql://postgres:5432/apg_ledger
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in the environment}
+
+  settlement-service:
+    build:
+      context: .
+      args: {SERVICE: settlement-service, PORT: "8090", HEALTH_PORT: "8090"}
+    image: apg/settlement-service:${APG_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      SETTLEMENT_DB_URL: jdbc:postgresql://postgres:5432/apg_settlement
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in the environment}
+
+  notification-service:
+    build:
+      context: .
+      args: {SERVICE: notification-service, PORT: "8091", HEALTH_PORT: "8091"}
+    image: apg/notification-service:${APG_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      NOTIFICATION_DB_URL: jdbc:postgresql://postgres:5432/apg_notification
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in the environment}
+
+  dashboard:
+    build: ./frontend
+    image: apg/dashboard:${APG_TAG:-dev}
+    restart: unless-stopped
+    depends_on: [api-gateway]
+    ports: ["${APG_PUBLIC_PORT:-8000}:8080"]

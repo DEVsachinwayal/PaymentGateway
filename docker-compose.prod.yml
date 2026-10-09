@@ -1,0 +1,32 @@
+# Production override: run the images pushed to OCIR instead of building on the server.
+#   docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.prod.yml up -d --no-build
+# OCIR_PREFIX looks like  bom.ocir.io/<tenancy-namespace>   and APG_TAG is the release tag (e.g. v1.4.0).
+# With managed Postgres / Redis / Kafka, remove those services here and point the *_DB_URL / REDIS_HOST / KAFKA_BOOTSTRAP_SERVERS
+# variables at them (docs/DEPLOYMENT.md). Never publish backend ports; only the dashboard is exposed (behind the OCI load balancer).
+services:
+  api-gateway:
+    image: ${OCIR_PREFIX:?set OCIR_PREFIX}/apg/api-gateway:${APG_TAG:?set APG_TAG}
+  auth-service:
+    image: ${OCIR_PREFIX}/apg/auth-service:${APG_TAG}
+  merchant-service:
+    image: ${OCIR_PREFIX}/apg/merchant-service:${APG_TAG}
+  order-service:
+    image: ${OCIR_PREFIX}/apg/order-service:${APG_TAG}
+  payment-service:
+    image: ${OCIR_PREFIX}/apg/payment-service:${APG_TAG}
+  provider-integration:
+    image: ${OCIR_PREFIX}/apg/provider-integration:${APG_TAG}
+  payment-orchestrator:
+    image: ${OCIR_PREFIX}/apg/payment-orchestrator:${APG_TAG}
+  webhook-service:
+    image: ${OCIR_PREFIX}/apg/webhook-service:${APG_TAG}
+  refund-service:
+    image: ${OCIR_PREFIX}/apg/refund-service:${APG_TAG}
+  ledger-service:
+    image: ${OCIR_PREFIX}/apg/ledger-service:${APG_TAG}
+  settlement-service:
+    image: ${OCIR_PREFIX}/apg/settlement-service:${APG_TAG}
+  notification-service:
+    image: ${OCIR_PREFIX}/apg/notification-service:${APG_TAG}
+  dashboard:
+    image: ${OCIR_PREFIX}/apg/dashboard:${APG_TAG}

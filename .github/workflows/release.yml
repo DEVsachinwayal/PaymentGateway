@@ -1,0 +1,90 @@
+name: Release
+
+# Tag vX.Y.Z -> build and push images to Oracle Cloud Registry (OCIR) -> deploy to production after manual approval.
+# Required repository configuration (see docs/CI_CD.md):
+#   variables: OCIR_REGISTRY (e.g. bom.ocir.io), OCIR_NAMESPACE (tenancy object storage namespace)
+#   secrets:   OCIR_USERNAME (<namespace>/<user>), OCIR_TOKEN (auth token), DEPLOY_SSH_KEY, DEPLOY_HOST, DEPLOY_USER
+#   environment "production" with required reviewers (that is the approval gate)
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  push-images:
+    name: Push ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - {service: api-gateway,          port: 8080, health: 8180}
+          - {service: auth-service,         port: 8081, health: 8081}
+          - {service: merchant-service,     port: 8082, health: 8082}
+          - {service: order-service,        port: 8083, health: 8083}
+          - {service: payment-service,      port: 8084, health: 8084}
+          - {service: provider-integration, port: 8085, health: 8085}
+          - {service: payment-orchestrator, port: 8086, health: 8086}
+          - {service: webhook-service,      port: 8087, health: 8087}
+          - {service: refund-service,       port: 8088, health: 8088}
+          - {service: ledger-service,       port: 8089, health: 8089}
+          - {service: settlement-service,   port: 8090, health: 8090}
+          - {service: notification-service, port: 8091, health: 8091}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.OCIR_REGISTRY }}
+          username: ${{ secrets.OCIR_USERNAME }}
+          password: ${{ secrets.OCIR_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/apg/${{ matrix.service }}:${{ github.ref_name }}
+          build-args: |
+            SERVICE=${{ matrix.service }}
+            PORT=${{ matrix.port }}
+            HEALTH_PORT=${{ matrix.health }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+
+  push-dashboard:
+    name: Push dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.OCIR_REGISTRY }}
+          username: ${{ secrets.OCIR_USERNAME }}
+          password: ${{ secrets.OCIR_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: true
+          tags: ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/apg/dashboard:${{ github.ref_name }}
+
+  deploy:
+    name: Deploy to production
+    needs: [push-images, push-dashboard]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production          # required reviewers = manual approval
+    concurrency: production-deploy   # never two deploys at once
+    steps:
+      - name: Deploy ${{ github.ref_name }} (rolls back automatically if the health check fails)
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER_NAME: ${{ secrets.DEPLOY_USER }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          install -m 600 /dev/null key
+          printf "%s\n" "$SSH_KEY" > key
+          ssh -i key -o StrictHostKeyChecking=accept-new "$USER_NAME@$HOST" "cd /opt/apg && ./scripts/deploy.sh $TAG"

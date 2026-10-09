@@ -25,7 +25,7 @@ Publishing is switched on with `APG_EVENTS_ENABLED=true` (default off, `scripts/
 ## Failure handling
 - Producer: a failed send stops the batch (order kept) and is retried next tick; nothing is marked published before the broker acknowledged.
 - Consumer: transient errors (database or merchant-service down) retry with exponential backoff 1 s .. 30 s for up to 2 min, then the record is parked on `<topic>.DLT` (any partition) with the exception headers. Malformed or invalid events skip retries and go to the DLT immediately, so one bad record never blocks a partition.
-- Inspect a DLT: `docker exec <kafka> /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic payment.success.DLT --from-beginning`. Re-drive after fixing the cause by re-publishing the value to the original topic (consumers are idempotent).
+- Inspect a DLT: `bash scripts/kafka-peek.sh payment.success.DLT` (the local Kafka image has no CLI tools; this reads without committing offsets and prints the failure reason headers). Re-drive after fixing the cause by re-publishing the value to the original topic (consumers are idempotent).
 
 ## Merchant webhooks (notification-service)
 Merchants subscribe endpoints (dashboard / `POST /api/v1/webhook-endpoints`) to: payment.success, payment.failed, payment.unknown, refund.success, refund.failed. Body: `{"id": <eventId>, "type": ..., "createdAt": ..., "data": {...}}` (no internal ids).

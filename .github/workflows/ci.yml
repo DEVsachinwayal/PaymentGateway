@@ -1,0 +1,155 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend build and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      # Testcontainers needs Docker (preinstalled on ubuntu-latest). No secrets are used: tests run against fakes and containers.
+      - name: Build and test all modules
+        run: mvn -B -ntp -fae verify
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: "**/target/surefire-reports/**"
+          retention-days: 7
+
+  frontend:
+    name: Dashboard build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build          # type-check + production bundle
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  secrets-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0            # scan the whole history, not just the tip
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-scan:
+    name: Dependency vulnerabilities (OWASP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: owasp-nvd-${{ github.run_id }}
+          restore-keys: owasp-nvd-
+      # An NVD API key (free) makes the database download reliable: add it as the repository secret NVD_API_KEY.
+      - name: OWASP dependency-check (fails on CVSS >= 7)
+        run: >
+          mvn -B -ntp org.owasp:dependency-check-maven:check
+          -DfailBuildOnCVSS=7 -DskipTestScope=true -Dformats=HTML,JSON
+          -DnvdApiKey="${{ secrets.NVD_API_KEY }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-report
+          path: "**/target/dependency-check-report.*"
+          retention-days: 14
+
+  images:
+    name: Image build (${{ matrix.service }})
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {service: api-gateway,          port: 8080, health: 8180}
+          - {service: auth-service,         port: 8081, health: 8081}
+          - {service: merchant-service,     port: 8082, health: 8082}
+          - {service: order-service,        port: 8083, health: 8083}
+          - {service: payment-service,      port: 8084, health: 8084}
+          - {service: provider-integration, port: 8085, health: 8085}
+          - {service: payment-orchestrator, port: 8086, health: 8086}
+          - {service: webhook-service,      port: 8087, health: 8087}
+          - {service: refund-service,       port: 8088, health: 8088}
+          - {service: ledger-service,       port: 8089, health: 8089}
+          - {service: settlement-service,   port: 8090, health: 8090}
+          - {service: notification-service, port: 8091, health: 8091}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image (not pushed)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: apg/${{ matrix.service }}:ci
+          build-args: |
+            SERVICE=${{ matrix.service }}
+            PORT=${{ matrix.port }}
+            HEALTH_PORT=${{ matrix.health }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+      - name: Scan image for vulnerabilities (fails on HIGH/CRITICAL with a fix available)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: apg/${{ matrix.service }}:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+  compose-config:
+    name: Compose files are valid
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose overlays with dummy values
+        run: |
+          export POSTGRES_USER=ci POSTGRES_PASSWORD=ci REDIS_PASSWORD=ci INTERNAL_SERVICE_TOKEN=ci-internal-token-123456 \
+                 JWT_PRIVATE_KEY=x JWT_PUBLIC_KEY=x API_KEY_HASH_PEPPER=x WEBHOOK_SECRET_KEY=x CHECKOUT_TOKEN_SECRET=x \
+                 PAYU_MERCHANT_KEY=x PAYU_MERCHANT_SALT=x OCIR_PREFIX=example.ocir.io/ns APG_TAG=ci
+          docker compose -f docker-compose.yml -f docker-compose.apps.yml config -q
+          docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.prod.yml config -q
