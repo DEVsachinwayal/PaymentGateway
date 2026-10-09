@@ -122,3 +122,10 @@
 - refund-service: GET /internal/v1/refunds/by-reference/{token} (tests 13/13). ledger-service: settlement.created posting (tests 12/12).
 - api-gateway: /api/v1/settlements/** route (+test, tests 14/14). dev-start.sh starts settlement-service.
 - Not built: automatic PayU settlement fetch (external), "missing in settlement" detection, dashboard screens for refunds/settlements/ledger.
+
+## 2026-10-09 – M12 events (branches feature/common-events, events-publishing, ledger-service, notification-service)
+- apg-common OutboxPublisher (Kafka, ordered, at-least-once) tested on a real Kafka container; payment/refund/settlement/webhook services publish (APG_EVENTS_ENABLED).
+- ledger-service consumes payment.success / refund.success / settlement.created with retry + DLT (tested incl. poison + redelivery).
+- notification-service (8091, DB apg_notification): signed merchant webhooks, retries/backoff, DEAD, resend, delivery history API, SSRF guard. Tests 12.
+- merchant-service: internal webhook-subscriber lookup. Gateway: /api/v1/webhook-deliveries/** (15 tests).
+- Docs: EVENTS.md, SERVICES.md. Not done: email channel, Redis beyond rate limit.
