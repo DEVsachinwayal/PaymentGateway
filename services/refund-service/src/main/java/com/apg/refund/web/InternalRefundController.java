@@ -16,9 +16,11 @@ public class InternalRefundController {
     public record ResolveRequest(@NotBlank String status, @Size(max = 200) String note) {}
 
     private final RefundService refunds;
+    private final com.apg.common.audit.AuditLog audit;
 
-    public InternalRefundController(RefundService refunds) {
+    public InternalRefundController(RefundService refunds, com.apg.common.audit.AuditLog audit) {
         this.refunds = refunds;
+        this.audit = audit;
     }
 
     /** Reconciliation lookup by the provider-side token (refund_reference). */
@@ -29,7 +31,15 @@ public class InternalRefundController {
 
     /** Settles a VERIFY_REQUIRED refund after a human checked the provider's own records. */
     @PostMapping("/{id}/resolve")
-    ApiResponse<RefundView> resolve(@PathVariable UUID id, @Valid @RequestBody ResolveRequest r) {
-        return ApiResponse.ok(refunds.resolve(id, r.status(), r.note()));
+    ApiResponse<RefundView> resolve(@PathVariable UUID id, @Valid @RequestBody ResolveRequest r,
+                                    @RequestHeader(value = "X-Operator", required = false) String operator) {
+        String actor = "ops:" + (operator == null || operator.isBlank() ? "unspecified" : operator);
+        java.util.Map<String, Object> details = new java.util.LinkedHashMap<>();
+        details.put("resolution", r.status());
+        details.put("note", r.note());
+        audit.record(actor, null, "REFUND_RESOLVE", id.toString(), "ATTEMPT", details);       // recorded before acting
+        RefundView v = refunds.resolve(id, r.status(), r.note());
+        audit.record(actor, null, "REFUND_RESOLVE", id.toString(), "SUCCESS", details);
+        return ApiResponse.ok(v);
     }
 }

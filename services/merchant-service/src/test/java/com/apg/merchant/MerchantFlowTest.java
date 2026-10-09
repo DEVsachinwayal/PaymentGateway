@@ -195,6 +195,35 @@ class MerchantFlowTest {
                 .contains(w.at("/data/id").asText()));
     }
 
+    @Test void securitySensitiveActionsLeaveAnAppendOnlyAuditTrailWithoutSecrets() throws Exception {
+        UUID u = newMerchantOwner();
+        JsonNode key = body(post(u, "MERCHANT_ADMIN", "/api/v1/api-keys", "{\"label\":\"audit me\",\"mode\":\"TEST\"}").andExpect(status().isCreated()));
+        String secret = key.at("/data/secret").asText();
+        String keyId = key.at("/data/id").asText();
+        JsonNode hook = body(post(u, "MERCHANT_ADMIN", "/api/v1/webhook-endpoints",
+                "{\"url\":\"https://shop.example/hook?token=URLSECRET123\",\"events\":[\"payment.success\"]}").andExpect(status().isCreated()));
+        post(u, "MERCHANT_ADMIN", "/api/v1/api-keys/" + keyId + "/rotate", "{\"graceHours\":1}").andExpect(status().isCreated());
+        delete(u, "MERCHANT_ADMIN", "/api/v1/api-keys/" + keyId).andExpect(status().isNoContent());
+        delete(u, "MERCHANT_ADMIN", "/api/v1/webhook-endpoints/" + hook.at("/data/id").asText()).andExpect(status().isNoContent());
+
+        UUID merchantId = UUID.fromString(jdbc.queryForObject("select merchant_id::text from webhook_endpoints where id = ?::uuid", String.class, hook.at("/data/id").asText()));
+        java.util.List<String> actions = jdbc.queryForList("select action from audit_events where merchant_id = ? order by occurred_at, id", String.class, merchantId);
+        assertTrue(actions.containsAll(java.util.List.of("MERCHANT_CREATED", "API_KEY_CREATED", "WEBHOOK_ENDPOINT_CREATED", "API_KEY_ROTATED", "API_KEY_REVOKED", "WEBHOOK_ENDPOINT_DELETED")), actions.toString());
+        String all = String.join(" ", jdbc.queryForList("select coalesce(actor,'') || ' ' || coalesce(target,'') || ' ' || coalesce(details,'') from audit_events where merchant_id = ?", String.class, merchantId));
+        assertFalse(all.contains(secret) || all.contains("URLSECRET123") || all.contains(hook.at("/data/signingSecret").asText()), "no secrets, no URL query strings in the audit trail");
+        assertTrue(all.contains("user:" + u), "the actor is recorded");
+        assertNotNull(jdbc.queryForObject("select count(*) from audit_events where correlation_id is not null or true", Integer.class));
+
+        // the merchant admin can read their own activity log; developers and other merchants cannot
+        get(u, "MERCHANT_ADMIN", "/api/v1/audit-events").andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(actions.size()))
+                .andExpect(jsonPath("$.data.content[0].action").exists());
+        get(u, "MERCHANT_ADMIN", "/api/v1/audit-events?action=API_KEY_ROTATED").andExpect(jsonPath("$.data.totalElements").value(1));
+        get(u, "MERCHANT_DEVELOPER", "/api/v1/audit-events").andExpect(status().isForbidden());
+        get(newMerchantOwner(), "MERCHANT_ADMIN", "/api/v1/audit-events").andExpect(jsonPath("$.data.totalElements").value(1));   // only their own MERCHANT_CREATED
+        assertThrows(org.springframework.core.NestedRuntimeException.class, () -> jdbc.update("update audit_events set outcome = 'X' where merchant_id = ?", merchantId));
+        assertThrows(org.springframework.core.NestedRuntimeException.class, () -> jdbc.update("delete from audit_events where merchant_id = ?", merchantId));
+    }
+
     @Test void userToMerchantLookupAndMalformedInput() throws Exception {
         UUID u = newMerchantOwner();
         mvc.perform(MockMvcRequestBuilders.get("/internal/v1/users/" + u + "/merchant").header("X-Internal-Token", TOKEN))

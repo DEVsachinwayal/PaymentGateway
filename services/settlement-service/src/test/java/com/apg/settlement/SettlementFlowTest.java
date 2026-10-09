@@ -294,6 +294,21 @@ class SettlementFlowTest {
         assertEquals(0, jdbc.queryForObject("select count(*) from settlements where batch_ref like 'V%'", Integer.class));
     }
 
+    @Test void operatorActionsAreAuditedBeforeAndAfter() throws Exception {
+        UUID m = UUID.randomUUID();
+        String tx = "T" + uniq();
+        peers.payment(m, tx, 700, "SUCCESS");
+        String ref = "B-" + uniq();
+        UUID id = importOk(batch(ref, 700, 0, 0, 700, item("PAYMENT", tx, 700, 0, 0)));
+        assertEquals(List.of("ATTEMPT", "SUCCESS"), jdbc.queryForList("select outcome from audit_events where action = 'SETTLEMENT_IMPORT' and target = ? order by occurred_at, id", String.class, "payu/" + ref));
+        assertEquals("ops:ops@apg", jdbc.queryForObject("select actor from audit_events where action = 'SETTLEMENT_IMPORT' and target = ? limit 1", String.class, "payu/" + ref));
+        UUID ms = jdbc.queryForObject("select id from merchant_settlements where settlement_id = ?", UUID.class, id);
+        mvc.perform(MockMvcRequestBuilders.post("/internal/v1/merchant-settlements/" + ms + "/paid").header("X-Internal-Token", TOKEN).header("X-Operator", "finance-2")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"payoutReference\":\"UTR-AUDIT-1\"}")).andExpect(status().isOk());
+        assertEquals(List.of("ATTEMPT", "SUCCESS"), jdbc.queryForList("select outcome from audit_events where action = 'PAYOUT_MARK_PAID' and target = ? order by occurred_at, id", String.class, ms.toString()));
+        assertEquals(m, jdbc.queryForObject("select merchant_id from audit_events where action = 'PAYOUT_MARK_PAID' and outcome = 'SUCCESS' and target = ?", UUID.class, ms.toString()));
+    }
+
     // ------------------------------------------------------------------ payouts and merchant view
 
     @Test void payoutNeedsEvidenceAndMerchantsSeeOnlyTheirOwn() throws Exception {

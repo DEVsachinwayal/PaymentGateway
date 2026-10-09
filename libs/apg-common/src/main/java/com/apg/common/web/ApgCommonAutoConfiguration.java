@@ -1,6 +1,7 @@
 package com.apg.common.web;
 
 import com.apg.common.api.GlobalExceptionHandler;
+import com.apg.common.audit.AuditLog;
 import com.apg.common.idempotency.IdempotencyService;
 import com.apg.common.metrics.DbGauges;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -56,5 +57,13 @@ public class ApgCommonAutoConfiguration {
     @ConditionalOnMissingBean
     DbGauges dbGauges(JdbcTemplate jdbc, MeterRegistry registry) {
         return new DbGauges(jdbc, registry);
+    }
+
+    /** Available in services that own an audit_events table (see AuditLog.TABLE_DDL). */
+    @Bean
+    @ConditionalOnBean(JdbcTemplate.class)
+    @ConditionalOnMissingBean
+    AuditLog auditLog(JdbcTemplate jdbc, ObjectMapper mapper) {
+        return new AuditLog(jdbc, mapper);
     }
 }

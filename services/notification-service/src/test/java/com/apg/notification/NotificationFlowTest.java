@@ -290,6 +290,13 @@ class NotificationFlowTest {
         UUID pending = jdbc.queryForObject("select id from notification_jobs where event_id = ?", UUID.class, e2);
         mvc.perform(user(MockMvcRequestBuilders.post("/api/v1/webhook-deliveries/" + pending + "/resend"), a, "MERCHANT_ADMIN"))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.error.code").value("DELIVERY_IN_PROGRESS"));
+        // a resend is audited with the acting user
+        UUID e3 = UUID.randomUUID();
+        service.onEvent(event("payment.success", e3, a));
+        service.deliverDue();
+        UUID delivered = jdbc.queryForObject("select id from notification_jobs where event_id = ?", UUID.class, e3);
+        mvc.perform(user(MockMvcRequestBuilders.post("/api/v1/webhook-deliveries/" + delivered + "/resend"), a, "MERCHANT_ADMIN")).andExpect(status().isOk());
+        assertEquals(1, jdbc.queryForObject("select count(*) from audit_events where action = 'WEBHOOK_DELIVERY_RESEND' and target = ? and merchant_id = ?", Integer.class, delivered.toString(), a));
         // the delivered payload and secrets are not part of the listing
         String list = mvc.perform(user(MockMvcRequestBuilders.get("/api/v1/webhook-deliveries"), a, "MERCHANT_ADMIN")).andReturn().getResponse().getContentAsString();
         assertFalse(list.contains("signingSecret") || list.contains("\"payload\""), list);

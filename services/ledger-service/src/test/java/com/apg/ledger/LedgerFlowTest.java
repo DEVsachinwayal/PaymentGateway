@@ -176,6 +176,7 @@ class LedgerFlowTest {
         assertNotEquals(original, reversal);
         mvc.perform(asUser(MockMvcRequestBuilders.get("/api/v1/ledger/balance"), m, "MERCHANT_ADMIN")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].payable").value(0)).andExpect(jsonPath("$.data[0].adjustments").value(-(4000 - 103)));
+        assertEquals(List.of("ATTEMPT", "SUCCESS"), jdbc.queryForList("select outcome from audit_events where action = 'LEDGER_REVERSE' and target = ? order by occurred_at, id", String.class, original.toString()));
         // the original is still there, untouched
         assertEquals(3, jdbc.queryForObject("select count(*) from ledger_entries where transaction_id = ?", Integer.class, original));
         mvc.perform(MockMvcRequestBuilders.post("/internal/v1/ledger/transactions/" + original + "/reverse").header("X-Internal-Token", TOKEN)

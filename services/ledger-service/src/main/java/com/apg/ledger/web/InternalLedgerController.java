@@ -23,8 +23,10 @@ public class InternalLedgerController {
     private final LedgerEvents events;
     private final LedgerService ledger;
     private final LedgerQueries queries;
+    private final com.apg.common.audit.AuditLog audit;
 
-    public InternalLedgerController(LedgerEvents events, LedgerService ledger, LedgerQueries queries) {
+    public InternalLedgerController(LedgerEvents events, LedgerService ledger, LedgerQueries queries, com.apg.common.audit.AuditLog audit) {
+        this.audit = audit;
         this.events = events;
         this.ledger = ledger;
         this.queries = queries;
@@ -37,8 +39,13 @@ public class InternalLedgerController {
     }
 
     @PostMapping("/transactions/{id}/reverse")
-    ApiResponse<Result> reverse(@PathVariable UUID id, @Valid @RequestBody ReverseRequest r) {
-        return ApiResponse.ok(ledger.reverse(id, r.reason()));
+    ApiResponse<Result> reverse(@PathVariable UUID id, @Valid @RequestBody ReverseRequest r,
+                                @RequestHeader(value = "X-Operator", required = false) String operator) {
+        String actor = "ops:" + (operator == null || operator.isBlank() ? "unspecified" : operator);
+        audit.record(actor, null, "LEDGER_REVERSE", id.toString(), "ATTEMPT", java.util.Map.of("reason", r.reason()));
+        Result res = ledger.reverse(id, r.reason());
+        audit.record(actor, null, "LEDGER_REVERSE", id.toString(), "SUCCESS", java.util.Map.of("reason", r.reason(), "reversalId", res.transactionId().toString()));
+        return ApiResponse.ok(res);
     }
 
     @GetMapping("/trial-balance")

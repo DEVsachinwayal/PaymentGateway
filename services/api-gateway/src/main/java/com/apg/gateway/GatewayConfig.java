@@ -41,7 +41,7 @@ public class GatewayConfig {
                                 .secureHeaders())
                         .uri(props.authUri()))
                 .route("merchant-service", r -> r
-                        .path("/api/v1/merchants/**", "/api/v1/api-keys/**", "/api/v1/webhook-endpoints/**")
+                        .path("/api/v1/merchants/**", "/api/v1/api-keys/**", "/api/v1/webhook-endpoints/**", "/api/v1/audit-events")
                         .filters(f -> f
                                 .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))
                                 .setRequestSize(props.maxRequestBytes())
