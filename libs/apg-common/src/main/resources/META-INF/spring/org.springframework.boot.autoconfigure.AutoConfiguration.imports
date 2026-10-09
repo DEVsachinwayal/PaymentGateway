@@ -1,1 +1,2 @@
 com.apg.common.web.ApgCommonAutoConfiguration
+com.apg.common.events.ApgEventsAutoConfiguration
