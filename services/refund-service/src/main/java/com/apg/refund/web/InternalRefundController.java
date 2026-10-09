@@ -21,6 +21,12 @@ public class InternalRefundController {
         this.refunds = refunds;
     }
 
+    /** Reconciliation lookup by the provider-side token (refund_reference). */
+    @GetMapping("/by-reference/{reference}")
+    ApiResponse<RefundService.Lookup> byReference(@PathVariable String reference) {
+        return ApiResponse.ok(refunds.lookupByReference(reference));
+    }
+
     /** Settles a VERIFY_REQUIRED refund after a human checked the provider's own records. */
     @PostMapping("/{id}/resolve")
     ApiResponse<RefundView> resolve(@PathVariable UUID id, @Valid @RequestBody ResolveRequest r) {
