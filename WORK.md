@@ -29,7 +29,7 @@ User communicates in Marathi/English. User asked: build the whole project per sp
 | M8 | Webhook | DONE (9 tests); needs real PayU callback proof |
 | M9 | Refund | DONE (refund-service 8088; 12 tests; PayU check_action_status shape unverified live) |
 | M10 | Ledger | DONE (ledger-service 8089; 11 tests; events delivered by M12 Kafka, HTTP meanwhile) |
-| M11 | Settlement + Reconciliation | todo |
+| M11 | Settlement + Reconciliation | DONE (settlement-service 8090; 10 tests; PayU auto-fetch external; import API for evidence) |
 | M12 | Kafka/Redis/Notifications/DLQ | todo |
 | M13 | Security + Observability | todo |
 | M14 | Performance (JMeter) | todo |
@@ -48,7 +48,7 @@ Frontend (React merchant dashboard) is built incrementally alongside M3..M11.
 
 ## CURRENT STATE (updated 2026-10-09, end of chat 1) – READ THIS FIRST
 - Branch workflow in force (see rules above). All work is merged to `main`; feature branches kept.
-- Services built + tested: auth(8081) merchant(8082) order(8083) payment(8084) provider-integration(8085) payment-orchestrator(8086) webhook-service(8087) refund-service(8088, M9 done) ledger-service(8089, M10 done) api-gateway(8080). Docker infra (postgres on **5433**, redis, kafka) via `docker compose up -d`.
+- Services built + tested: auth(8081) merchant(8082) order(8083) payment(8084) provider-integration(8085) payment-orchestrator(8086) webhook-service(8087) refund-service(8088, M9 done) ledger-service(8089, M10 done) settlement-service(8090, M11 done) api-gateway(8080). Docker infra (postgres on **5433**, redis, kafka) via `docker compose up -d`.
 - Run everything: `bash scripts/dev-start.sh` (stop: `bash scripts/dev-stop.sh`). Logs in `.run/`. If a service fails with NoClassDefFound / "bean IdempotencyService not found", its fat jar lacks apg-common's `AutoConfiguration.imports` (IDE interference during `mvn clean package`): `rm -rf services/<svc>/target && mvn -q package -DskipTests`.
 - After editing tests use `mvn clean test` for that module (stale compiled classes once hid a new test).
 - PayU TEST key/salt are in `.env` (verified: PayU accepted our signature). Never print them.
@@ -58,5 +58,5 @@ Frontend (React merchant dashboard) is built incrementally alongside M3..M11.
 ## NEXT STEPS (in order)
 1. Finish/verify the real PayU sandbox payment (above); fix whatever it reveals (callback field names, hash with real data).
 2. M9 Refund DONE (see docs/REFUNDS.md). Dashboard Refunds screens still TODO. First real sandbox refund must confirm PayU check_action_status JSON shape.
-3. M10 Ledger DONE. Next: M11 Settlement/Reconciliation, M12 Kafka/Redis/Notifications (outbox publishers exist in payment + webhook DBs), M13 security/observability, M14 JMeter, M15 OCI/CI-CD, M16 release docs.
+3. M10 Ledger + M11 Settlement DONE. Next: M12 Kafka/Redis/Notifications (outbox publishers exist in payment + webhook DBs), M13 security/observability, M14 JMeter, M15 OCI/CI-CD, M16 release docs.
 4. React dashboard v1 is DONE (frontend/, branch feature/frontend: login, onboarding, overview, payments+timeline, orders, API keys, webhooks, settings; run `cd frontend && npm install && npm run dev` -> :5173, proxies /api to gateway). TODO there: refunds, settlements, webhook delivery history, team/roles screens (need backend), server-side stats endpoint. Phase 2 (outside spec): payment links, invoices, QR, subscriptions. Still open: ops APIs (activate merchant, grant roles), fill the stub docs (ARCHITECTURE, SERVICES, DATABASE, SECURITY, TESTING...).

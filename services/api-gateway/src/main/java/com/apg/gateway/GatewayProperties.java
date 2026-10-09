@@ -16,6 +16,7 @@ public record GatewayProperties(
         String webhookUri,
         String refundUri,
         String ledgerUri,
+        String settlementUri,
         List<String> corsAllowedOrigins,
         long maxRequestBytes,
         RateLimit rateLimit) {

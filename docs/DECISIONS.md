@@ -63,3 +63,9 @@ Immutability triggers (no UPDATE/DELETE/TRUNCATE) and a deferred constraint trig
 HTTP delivery now, Kafka in M12, same code path. Idempotency by eventId and by (tx_type, reference_id), so a re-published event or a second publisher cannot double count.
 ## D32 – Fee is configurable placeholder pricing
 Default 0 (no fee) until the business defines pricing; capped at the payment amount; refunds do not return the fee (documented, revisit with the business).
+## D33 – Settlement evidence is imported, hashed and immutable; PayU auto-fetch is an external dependency
+Operators import the provider's batch (same API a future PayU adapter will call). Same batch + different content => 409; the database forbids editing/deleting evidence so a mismatch can only be explained, never hidden.
+## D34 – Reconciliation never guesses
+Each difference is an exception with reason + evidence; a failed lookup leaves the item unevaluated (batch IMPORTED, retried), operator decisions are final, a batch is announced to the ledger only when fully reconciled.
+## D35 – A merchant payout is PAID only with a payout reference
+Evidence-based status (CHECK constraint), mirroring "never mark settlement successful without provider evidence".
