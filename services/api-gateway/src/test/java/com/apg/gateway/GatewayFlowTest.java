@@ -45,6 +45,7 @@ class GatewayFlowTest {
     static GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
 
     /** Stub downstream: echoes selected request headers so tests can see what the gateway forwarded. */
+    static final java.util.concurrent.atomic.AtomicInteger verifyCalls = new java.util.concurrent.atomic.AtomicInteger();
     static final HttpServer backend = startBackend();
 
     static HttpServer startBackend() {
@@ -55,6 +56,7 @@ class GatewayFlowTest {
                 int code = 200;
                 String body;
                 if (path.equals("/internal/v1/api-keys/verify")) {
+                    verifyCalls.incrementAndGet();
                     String in = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
                     if (in.contains("sk_test_good.secret")) {
                         body = "{\"data\":{\"merchantId\":\"merch-api\",\"apiKeyId\":\"key-1\",\"mode\":\"TEST\"}}";
@@ -107,6 +109,7 @@ class GatewayFlowTest {
         r.add("apg.gateway.ledger-uri", () -> url);
         r.add("apg.gateway.settlement-uri", () -> url);
         r.add("apg.gateway.notification-uri", () -> url);
+        r.add("apg.gateway.api-key-cache-ttl", () -> "1s");
         r.add("apg.gateway.internal-token", () -> "internal-token-for-tests-123");
         r.add("apg.gateway.rate-limit.replenish-per-second", () -> 1);
         r.add("apg.gateway.rate-limit.burst", () -> 3);
@@ -246,6 +249,27 @@ class GatewayFlowTest {
                 .expectHeader().exists("Strict-Transport-Security");
         // errors produced by the gateway itself are not cacheable either
         web.get().uri("/api/v1/orders/abc").exchange().expectStatus().isUnauthorized().expectHeader().valueEquals("Cache-Control", "no-store");
+    }
+
+    @Test @Order(3)
+    void apiKeyVerificationIsCachedBrieflyAndOnlyWhenValid() throws Exception {
+        // the test gateway allows a burst of 3 and refills 1/s: pace the calls so the limiter never interferes
+        Thread.sleep(3500);                                    // refill the bucket and let anything cached earlier expire (ttl 1 s)
+        int before = verifyCalls.get();
+        for (int i = 0; i < 2; i++) {
+            web.get().uri("/api/v1/orders/abc").header("Authorization", "Bearer sk_test_good.secret").exchange().expectStatus().isOk();
+        }
+        assertEquals(before + 1, verifyCalls.get(), "two calls, one verification hop");
+        Thread.sleep(1300);
+        web.get().uri("/api/v1/orders/abc").header("Authorization", "Bearer sk_test_good.secret").exchange().expectStatus().isOk();
+        assertEquals(before + 2, verifyCalls.get(), "re-verified after the TTL (so revocation takes effect within it)");
+
+        Thread.sleep(1100);
+        int bad = verifyCalls.get();
+        for (int i = 0; i < 2; i++) {
+            web.get().uri("/api/v1/orders/abc").header("Authorization", "Bearer sk_test_bad.secret").exchange().expectStatus().isUnauthorized();
+        }
+        assertEquals(bad + 2, verifyCalls.get(), "invalid keys are never cached");
     }
 
     @Test @Order(2)
