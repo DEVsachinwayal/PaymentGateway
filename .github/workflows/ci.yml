@@ -116,6 +116,7 @@ jobs:
           - {service: ledger-service,       port: 8089, health: 8089}
           - {service: settlement-service,   port: 8090, health: 8090}
           - {service: notification-service, port: 8091, health: 8091}
+          - {service: payment-link-service, port: 8092, health: 8092}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3

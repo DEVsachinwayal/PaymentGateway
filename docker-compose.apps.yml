@@ -17,6 +17,7 @@ x-app-env: &app-env
   LEDGER_SERVICE_URI: http://ledger-service:8089
   SETTLEMENT_SERVICE_URI: http://settlement-service:8090
   NOTIFICATION_SERVICE_URI: http://notification-service:8091
+  PAYMENT_LINK_SERVICE_URI: http://payment-link-service:8092
 
 services:
   kafka:
@@ -224,6 +225,23 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in the environment}
+
+  payment-link-service:
+    build:
+      context: .
+      args: {SERVICE: payment-link-service, PORT: "8092", HEALTH_PORT: "8092"}
+    image: apg/payment-link-service:${APG_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      PAYMENTLINK_DB_URL: jdbc:postgresql://postgres:5432/apg_paymentlink
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in the environment}
+      PUBLIC_BASE_URL: ${APG_PUBLIC_URL:-http://localhost:8000}
 
   dashboard:
     build: ./frontend
