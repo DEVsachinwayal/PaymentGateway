@@ -273,6 +273,20 @@ class GatewayFlowTest {
     }
 
     @Test @Order(2)
+    void providerReturnsFromAnotherOriginAreNotBlockedByCorsButTheDashboardApiStillIs() {
+        // the payment provider's page posts the customer's browser back: foreign Origin, must reach the webhook route
+        web.post().uri("/api/v1/webhooks/payu").header("Origin", "https://test.payu.in").bodyValue("txnid=A1")
+                .exchange().expectStatus().isOk();
+        web.get().uri("/payment-result").header("Origin", "https://test.payu.in").exchange().expectStatus().isOk();
+        // while a foreign website cannot call the merchant/dashboard API from a browser
+        web.get().uri("/api/v1/orders/abc").header("Origin", "https://evil.example").header("Authorization", "Bearer sk_test_good.secret")
+                .exchange().expectStatus().isForbidden();
+        // the real dashboard origin is still allowed
+        web.get().uri("/api/v1/orders/abc").header("Origin", "http://localhost:5173").header("Authorization", "Bearer sk_test_good.secret")
+                .exchange().expectStatus().isOk().expectHeader().valueEquals("Access-Control-Allow-Origin", "http://localhost:5173");
+    }
+
+    @Test @Order(2)
     void checkoutPageIsPublicButCheckoutApiIsNot() {
         web.get().uri("/checkout/some-token").exchange().expectStatus().isOk().expectBody()
                 .jsonPath("$.path").isEqualTo("/checkout/some-token").jsonPath("$.internal").isEqualTo("internal-token-for-tests-123");

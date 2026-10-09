@@ -11,6 +11,9 @@ Follow one request through the system with its correlation id (`X-Correlation-Id
 5. If still unclear: compare with PayU's merchant dashboard transaction; only then, if PayU confirms, an operator may move the payment via the internal transition API (`POST /internal/v1/payments/{id}/transition`, source OPS, with a reason) - it still goes through the state machine.
 Never mark SUCCESS from a browser redirect or an unsigned callback.
 
+## Customer is sent back from PayU and sees "Access denied / 403"
+PayU posts the customer's browser from its own origin to `/api/v1/webhooks/payu`. The gateway's CORS filter must not apply to `/api/v1/webhooks/**`, `/checkout/**`, `/payment-result` (fixed 2026-10-09; regression test `providerReturnsFromAnotherOriginAreNotBlockedByCorsButTheDashboardApiStillIs`). If it reappears, check the gateway logs for "Invalid CORS request". Meanwhile the verification worker still settles the payment by asking PayU.
+
 ## Duplicate payment / double charge suspicion
 Idempotency record (`idempotency_keys`) -> one payment per order (`PAYMENT_ALREADY_EXISTS`) -> provider reference uniqueness (`payment_attempts.provider_reference`) -> webhook fingerprint (`webhook_events` unique per provider+fingerprint) -> ledger (`ledger_transactions` unique per `(CAPTURE, payment)`). A second capture posting is impossible by constraint; a second provider charge would show as two attempts with different txnids - refund the extra one.
 
