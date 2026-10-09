@@ -14,6 +14,7 @@ for s in auth-service merchant-service order-service payment-service provider-in
   if [ "$n" != "1" ]; then echo "ERROR: $s jar lacks apg-common auto-configuration; rebuild it (see comment in scripts/dev-start.sh)"; exit 2; fi
 done
 set -a; . ./.env; set +a
+export APG_EVENTS_ENABLED="${APG_EVENTS_ENABLED:-true}"
 export PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-http://localhost:8080}"
 mkdir -p .run
 for s in auth-service merchant-service order-service payment-service provider-integration payment-orchestrator webhook-service refund-service ledger-service settlement-service api-gateway; do

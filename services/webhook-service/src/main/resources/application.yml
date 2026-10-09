@@ -12,6 +12,13 @@ spring:
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
 management:
   endpoints:
     web:
@@ -23,6 +30,10 @@ management:
         enabled: true
 
 apg:
+  events:
+    publisher:
+      # relays this service outbox_events table to Kafka (topic = event type); on in dev-start.sh, off in unit tests
+      enabled: ${APG_EVENTS_ENABLED:false}
   internal:
     token: ${INTERNAL_SERVICE_TOKEN}
   webhook:
