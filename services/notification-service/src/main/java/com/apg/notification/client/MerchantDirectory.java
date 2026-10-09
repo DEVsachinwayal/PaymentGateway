@@ -22,7 +22,7 @@ public class MerchantDirectory {
     public MerchantDirectory(NotificationProperties props, @Value("${apg.internal.token}") String token) {
         JdkClientHttpRequestFactory f = new JdkClientHttpRequestFactory(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build());
         f.setReadTimeout(Duration.ofSeconds(5));
-        this.client = RestClient.builder().baseUrl(props.merchantServiceUri()).requestFactory(f).defaultHeader("X-Internal-Token", token).build();
+        this.client = RestClient.builder().requestInterceptor(com.apg.common.web.OutboundHeaders.INSTANCE).baseUrl(props.merchantServiceUri()).requestFactory(f).defaultHeader("X-Internal-Token", token).build();
     }
 
     /** Throws when merchant-service cannot answer: the caller must retry, never assume "no subscribers". */

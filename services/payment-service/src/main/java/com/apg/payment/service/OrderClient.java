@@ -27,7 +27,7 @@ public class OrderClient {
         HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(http);
         factory.setReadTimeout(Duration.ofSeconds(3));
-        this.client = RestClient.builder().baseUrl(props.orderServiceUri()).requestFactory(factory)
+        this.client = RestClient.builder().requestInterceptor(com.apg.common.web.OutboundHeaders.INSTANCE).baseUrl(props.orderServiceUri()).requestFactory(factory)
                 .defaultHeader("X-Internal-Token", internalToken).build();
     }
 

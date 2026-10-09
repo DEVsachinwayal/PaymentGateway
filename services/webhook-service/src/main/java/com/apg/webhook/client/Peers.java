@@ -40,7 +40,7 @@ public class Peers {
     private static RestClient build(String base, String token, int readSeconds) {
         JdkClientHttpRequestFactory f = new JdkClientHttpRequestFactory(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build());
         f.setReadTimeout(Duration.ofSeconds(readSeconds));
-        return RestClient.builder().baseUrl(base).requestFactory(f).defaultHeader("X-Internal-Token", token).build();
+        return RestClient.builder().requestInterceptor(com.apg.common.web.OutboundHeaders.INSTANCE).baseUrl(base).requestFactory(f).defaultHeader("X-Internal-Token", token).build();
     }
 
     public Verification verifyCallback(String provider, Map<String, String> fields) {
