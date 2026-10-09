@@ -22,9 +22,12 @@ public class MerchantController {
     private final ApiKeyService apiKeys;
     private final WebhookEndpointService webhooks;
     private final com.apg.common.audit.AuditLog audit;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
-    public MerchantController(MerchantService merchants, ApiKeyService apiKeys, WebhookEndpointService webhooks, com.apg.common.audit.AuditLog audit) {
+    public MerchantController(MerchantService merchants, ApiKeyService apiKeys, WebhookEndpointService webhooks, com.apg.common.audit.AuditLog audit,
+                              org.springframework.jdbc.core.JdbcTemplate jdbc) {
         this.audit = audit;
+        this.jdbc = jdbc;
         this.merchants = merchants;
         this.apiKeys = apiKeys;
         this.webhooks = webhooks;
@@ -137,6 +140,28 @@ public class MerchantController {
         UUID mid = merchantOf(c);
         webhooks.delete(mid, id);
         audit.record(auditCtx(c, mid), "WEBHOOK_ENDPOINT_DELETED", id.toString(), "SUCCESS", null);
+    }
+
+    // ---- activity log ----
+    public record AuditEventView(UUID id, java.time.Instant at, String action, String actor, String target, String outcome, String details) {}
+
+    /** The merchant's own security activity (keys, webhooks, settings, refunds...). Admins only: it shows who did what. */
+    @GetMapping("/api/v1/audit-events")
+    ApiResponse<java.util.Map<String, Object>> auditEvents(CallerContext c, @RequestParam(defaultValue = "0") int page,
+                                                           @RequestParam(defaultValue = "50") int size, @RequestParam(required = false) String action) {
+        c.requireAnyRole(ADMIN);
+        UUID mid = merchantOf(c);
+        int s = Math.min(Math.max(size, 1), 200), pg = Math.max(page, 0);
+        String where = action == null ? "merchant_id = ?" : "merchant_id = ? AND action = ?";
+        Object[] args = action == null ? new Object[]{mid} : new Object[]{mid, action};
+        Long total = jdbc.queryForObject("SELECT COUNT(*) FROM audit_events WHERE " + where, Long.class, args);
+        Object[] pageArgs = java.util.Arrays.copyOf(args, args.length + 2);
+        pageArgs[args.length] = s;
+        pageArgs[args.length + 1] = pg * s;
+        List<AuditEventView> rows = jdbc.query("SELECT * FROM audit_events WHERE " + where + " ORDER BY occurred_at DESC, id LIMIT ? OFFSET ?",
+                (rs, i) -> new AuditEventView(rs.getObject("id", UUID.class), rs.getTimestamp("occurred_at").toInstant(), rs.getString("action"),
+                        rs.getString("actor"), rs.getString("target"), rs.getString("outcome"), rs.getString("details")), pageArgs);
+        return ApiResponse.ok(java.util.Map.of("content", rows, "page", pg, "size", s, "totalElements", total == null ? 0 : total));
     }
 
     /** For a dashboard user the merchant is derived server-side, so the audit record gets it explicitly. */

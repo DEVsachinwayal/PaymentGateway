@@ -214,6 +214,12 @@ class MerchantFlowTest {
         assertTrue(all.contains("user:" + u), "the actor is recorded");
         assertNotNull(jdbc.queryForObject("select count(*) from audit_events where correlation_id is not null or true", Integer.class));
 
+        // the merchant admin can read their own activity log; developers and other merchants cannot
+        get(u, "MERCHANT_ADMIN", "/api/v1/audit-events").andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(actions.size()))
+                .andExpect(jsonPath("$.data.content[0].action").exists());
+        get(u, "MERCHANT_ADMIN", "/api/v1/audit-events?action=API_KEY_ROTATED").andExpect(jsonPath("$.data.totalElements").value(1));
+        get(u, "MERCHANT_DEVELOPER", "/api/v1/audit-events").andExpect(status().isForbidden());
+        get(newMerchantOwner(), "MERCHANT_ADMIN", "/api/v1/audit-events").andExpect(jsonPath("$.data.totalElements").value(1));   // only their own MERCHANT_CREATED
         assertThrows(org.springframework.core.NestedRuntimeException.class, () -> jdbc.update("update audit_events set outcome = 'X' where merchant_id = ?", merchantId));
         assertThrows(org.springframework.core.NestedRuntimeException.class, () -> jdbc.update("delete from audit_events where merchant_id = ?", merchantId));
     }
