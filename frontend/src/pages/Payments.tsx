@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { api, type Page, type Payment } from '../api'
 import { Badge, Empty, ErrorNote, PageHead, Spinner, useLoad } from '../components'
 import { dt, money, short } from '../util'
@@ -18,6 +18,7 @@ export default function Payments() {
   return (
     <>
       <PageHead title="Payments" sub="Every payment attempt and its verified status.">
+        <Link className="btn primary" to="/new-payment">+ Collect payment</Link>
         <button className="btn" onClick={reload}>↻ Refresh</button>
       </PageHead>
       <ErrorNote error={error} />
