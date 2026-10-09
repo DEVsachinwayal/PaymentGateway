@@ -5,6 +5,7 @@ Start with the repository `README.md` (run it locally in 5 steps) and `WORK.md` 
 | I want to... | Read |
 |---|---|
 | understand the system | ARCHITECTURE.md, SERVICES.md, PAYMENT_LIFECYCLE.md, DECISIONS.md (why) |
+| accept payments on my own website | INTEGRATION_GUIDE.md (+ `examples/sample-shop`) |
 | call the API | API_REFERENCE.md (auth, idempotency, errors), WEBHOOKS.md + EVENTS.md (merchant webhooks, signatures) |
 | work on the database | DATABASE.md |
 | configure it | CONFIGURATION.md, `.env.example` |
