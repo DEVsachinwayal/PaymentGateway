@@ -25,7 +25,13 @@ public class ApgEventsAutoConfiguration {
     @ConditionalOnMissingBean
     OutboxPublisher outboxPublisher(JdbcTemplate jdbc, TransactionTemplate tx, KafkaTemplate<String, String> kafka,
                                     @Value("${apg.events.publisher.batch-size:100}") int batchSize,
-                                    @Value("${apg.events.publisher.interval-ms:1000}") long intervalMs) {
-        return new OutboxPublisher(jdbc, tx, kafka, Clock.systemUTC(), batchSize, intervalMs);
+                                    @Value("${apg.events.publisher.interval-ms:1000}") long intervalMs,
+                                    org.springframework.beans.factory.ObjectProvider<io.micrometer.core.instrument.MeterRegistry> meters,
+                                    org.springframework.beans.factory.ObjectProvider<com.apg.common.metrics.DbGauges> gauges) {
+        OutboxPublisher p = new OutboxPublisher(jdbc, tx, kafka, Clock.systemUTC(), batchSize, intervalMs);
+        io.micrometer.core.instrument.MeterRegistry m = meters.getIfAvailable();
+        com.apg.common.metrics.DbGauges g = gauges.getIfAvailable();
+        if (m != null && g != null) p.setMeters(m, g);
+        return p;
     }
 }

@@ -40,13 +40,18 @@ public class LedgerKafkaConfig {
     }
 
     @Bean
-    CommonErrorHandler ledgerErrorHandler(KafkaOperations<Object, Object> template) {
+    CommonErrorHandler ledgerErrorHandler(KafkaOperations<Object, Object> template, io.micrometer.core.instrument.MeterRegistry meters) {
         DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(template,
                 (record, ex) -> new TopicPartition(record.topic() + ".DLT", -1));          // any partition: the DLT is small
         ExponentialBackOff backOff = new ExponentialBackOff(1_000L, 2.0);
         backOff.setMaxInterval(30_000L);
         backOff.setMaxElapsedTime(2 * 60_000L);
-        DefaultErrorHandler handler = new DefaultErrorHandler(recoverer, backOff);
+        // count every record parked on a dead-letter topic: a growing DLQ is an alert (docs/OBSERVABILITY.md)
+        org.springframework.kafka.listener.ConsumerRecordRecoverer counting = (record, ex) -> {
+            meters.counter("apg_dlq_records_total", "topic", record.topic(), "service", "ledger").increment();
+            recoverer.accept(record, ex);
+        };
+        DefaultErrorHandler handler = new DefaultErrorHandler(counting, backOff);
         handler.addNotRetryableExceptions(ApiException.class, JsonProcessingException.class, IllegalArgumentException.class);
         return handler;
     }

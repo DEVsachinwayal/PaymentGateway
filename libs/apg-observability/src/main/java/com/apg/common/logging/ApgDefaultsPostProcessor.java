@@ -18,6 +18,8 @@ public class ApgDefaultsPostProcessor implements EnvironmentPostProcessor, Order
     public void postProcessEnvironment(ConfigurableEnvironment env, SpringApplication application) {
         Map<String, Object> d = new HashMap<>();
         d.put("logging.structured.json.customizer", "com.apg.common.logging.MaskingJsonCustomizer");
+        d.put("management.metrics.tags.application", "${spring.application.name:apg}");       // lets dashboards/alerts split by service
+        d.put("management.metrics.distribution.percentiles-histogram.http.server.requests", "true");   // p95/p99 latency
         String endpoint = env.getProperty("APG_TRACING_ENDPOINT");
         if (endpoint != null && !endpoint.isBlank()) {
             d.put("management.otlp.tracing.endpoint", endpoint);
