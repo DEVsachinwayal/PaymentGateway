@@ -78,3 +78,21 @@ export interface Payment { id: string; orderId: string; amount: number; currency
 export interface HistoryItem { from: string | null; to: string; reason?: string; source: string; at: string }
 export interface PaymentStatus { paymentId: string; status: string; updatedAt: string; history: HistoryItem[] }
 export interface Page<T> { content: T[]; page: number; size: number; totalElements: number }
+export interface Refund { id: string; paymentId: string; amount: number; currency: string; status: string; reason?: string; failureMessage?: string; createdAt: string; updatedAt: string }
+export interface LedgerBalance { currency: string; payable: number; captured: number; fees: number; refunded: number; adjustments: number }
+export interface LedgerTx { id: string; type: string; referenceId: string; currency: string; description?: string; reversesId?: string; occurredAt: string; entries: { account: string; side: 'DEBIT' | 'CREDIT'; amount: number }[] }
+export interface MerchantSettlement { id: string; settlementId: string; provider: string; settlementDate: string; currency: string; gross: number; refunds: number; providerFees: number; net: number; status: string; payoutReference?: string; paidAt?: string }
+export interface DeliveryAttempt { attemptNo: number; outcome: string; httpStatus?: number; detail?: string; durationMs: number; at: string }
+export interface Delivery { id: string; eventId: string; eventType: string; endpointUrl: string; status: string; attempts: number; nextAttemptAt?: string; lastHttpStatus?: number; lastError?: string; createdAt: string; deliveredAt?: string; history: DeliveryAttempt[] }
+export interface AuditEvent { id: string; at: string; action: string; actor: string; target?: string; outcome: string; details?: string }
+
+/** Rupees typed by a person -> integer paise. Returns null when the text is not a valid amount (never rounds silently). */
+export function toMinor(text: string): number | null {
+  const t = text.trim()
+  if (!/^\d{1,9}(\.\d{1,2})?$/.test(t)) return null
+  const [whole, frac = ''] = t.split('.')
+  const v = Number(whole) * 100 + Number(frac.padEnd(2, '0'))
+  return v > 0 ? v : null
+}
+
+export const newKey = () => crypto.randomUUID()

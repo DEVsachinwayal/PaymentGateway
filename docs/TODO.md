@@ -9,7 +9,8 @@
 - Business decisions: fee schedule (placeholder 0), GST on fees, refund fee policy, settlement schedule, chargeback handling, data retention.
 
 ## Engineering backlog (ordered roughly by value)
-- [ ] Dashboard screens: refunds, settlements, ledger statement, webhook delivery history + resend, activity log, test-mode toggle (APIs exist)
+- [x] Dashboard screens: refunds, settlements, ledger statement, webhook delivery history + resend, activity log (done)
+- [ ] Dashboard: test-mode toggle, team management, server-side stats endpoint for the overview
 - [ ] Execute the JMeter plan (needs JMeter installed); soak test; repeat on OCI-sized hardware
 - [ ] Confirm PayU `check_action_status` success mapping when the sandbox refund flips from pending (first poll returned "pending" = PROCESSING)
 - [ ] Operator access: authenticated ops API/UI, grant APG_OPERATIONS/APG_FINANCE roles, activate merchants (SANDBOX -> ACTIVE) after KYC, 2-person approval for ledger reversals
