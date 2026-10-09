@@ -35,15 +35,17 @@ CREATE TABLE refund_attempts (                      -- every provider interactio
 );
 CREATE INDEX ix_refund_attempt_refund ON refund_attempts (refund_id);
 
-CREATE TABLE outbox_events (                        -- transactional outbox (published to Kafka in M12)
-    id           UUID PRIMARY KEY,
-    event_type   VARCHAR(60)  NOT NULL,
-    aggregate_id UUID         NOT NULL,
-    payload      TEXT         NOT NULL,
-    created_at   TIMESTAMPTZ  NOT NULL,
-    published_at TIMESTAMPTZ
+CREATE TABLE outbox_events (                        -- transactional outbox (published to Kafka in M12); payload = full event envelope (spec 17.1)
+    id             UUID PRIMARY KEY,
+    event_type     VARCHAR(60)  NOT NULL,
+    aggregate_id   UUID         NOT NULL,
+    merchant_id    UUID         NOT NULL,
+    correlation_id VARCHAR(64),
+    payload        TEXT         NOT NULL,
+    occurred_at    TIMESTAMPTZ  NOT NULL,
+    published_at   TIMESTAMPTZ
 );
-CREATE INDEX ix_refund_outbox_unpublished ON outbox_events (created_at) WHERE published_at IS NULL;
+CREATE INDEX ix_refund_outbox_unpublished ON outbox_events (occurred_at) WHERE published_at IS NULL;
 
 CREATE TABLE idempotency_keys (
     merchant_id     UUID         NOT NULL,

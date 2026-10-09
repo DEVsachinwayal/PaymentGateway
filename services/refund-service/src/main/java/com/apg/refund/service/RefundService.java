@@ -1,6 +1,7 @@
 package com.apg.refund.service;
 
 import com.apg.common.api.ApiException;
+import com.apg.common.web.CorrelationIdFilter;
 import com.apg.refund.client.Peers;
 import com.apg.refund.client.Peers.PaymentInfo;
 import com.apg.refund.client.Peers.ProviderRefund;
@@ -23,6 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -102,7 +104,7 @@ public class RefundService {
                 VALUES (?, ?, ?, ?, ?, 'CREATED', ?, ?, ?, ?, FALSE, ?, ?)""",
                 id, merchantId, p.paymentId(), amount, p.currency(), truncate(req.reason(), 300), p.provider(), p.providerPaymentId(),
                 reference, Timestamp.from(now), Timestamp.from(now));
-        outbox("refund.created", id, merchantId, p.paymentId(), amount, p.currency(), "CREATED", now);
+        outbox("refund.created", id, now);
         return get(merchantId, id);
     }
 
@@ -206,8 +208,7 @@ public class RefundService {
                     status, truncate(message, 300), Timestamp.from(now), id);
             if (changed == 1) {
                 attempt(id, kind, outcome, detail, now);
-                Row r = row(id);
-                outbox("SUCCESS".equals(status) ? "refund.success" : "refund.failed", id, r.merchantId(), r.paymentId(), r.amount(), null, status, now);
+                outbox("SUCCESS".equals(status) ? "refund.success" : "refund.failed", id, now);
             }
         });
     }
@@ -313,20 +314,34 @@ public class RefundService {
                 refundId, kind, outcome, truncate(detail, 300), Timestamp.from(now));
     }
 
-    private void outbox(String type, UUID refundId, UUID merchantId, UUID paymentId, long amount, String currency, String status, Instant now) {
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("refundId", refundId);
-        payload.put("merchantId", merchantId);
-        payload.put("paymentId", paymentId);
-        payload.put("amount", amount);
-        if (currency != null) payload.put("currency", currency);
-        payload.put("status", status);
-        try {
-            jdbc.update("INSERT INTO outbox_events (id, event_type, aggregate_id, payload, created_at) VALUES (?, ?, ?, ?, ?)",
-                    UUID.randomUUID(), type, refundId, mapper.writeValueAsString(payload), Timestamp.from(now));
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException(e);
-        }
+    /** Writes the event envelope (spec 17.1) in the caller's transaction; read back from the row so it is always consistent. */
+    private void outbox(String type, UUID refundId, Instant now) {
+        jdbc.query("SELECT merchant_id, payment_id, amount, currency, status FROM refunds WHERE id = ?", rs -> {
+            UUID merchantId = rs.getObject("merchant_id", UUID.class);
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("refundId", refundId);
+            payload.put("paymentId", rs.getObject("payment_id", UUID.class));
+            payload.put("amount", rs.getLong("amount"));
+            payload.put("currency", rs.getString("currency"));
+            payload.put("status", rs.getString("status"));
+            UUID eventId = UUID.randomUUID();
+            String correlation = MDC.get(CorrelationIdFilter.MDC_KEY);
+            Map<String, Object> envelope = new LinkedHashMap<>();
+            envelope.put("eventId", eventId);
+            envelope.put("eventType", type);
+            envelope.put("version", 1);
+            envelope.put("occurredAt", now.toString());
+            envelope.put("correlationId", correlation);
+            envelope.put("aggregateId", refundId);
+            envelope.put("merchantId", merchantId);
+            envelope.put("payload", payload);
+            try {
+                jdbc.update("INSERT INTO outbox_events (id, event_type, aggregate_id, merchant_id, correlation_id, payload, occurred_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        eventId, type, refundId, merchantId, correlation, mapper.writeValueAsString(envelope), Timestamp.from(now));
+            } catch (JsonProcessingException e) {
+                throw new IllegalStateException(e);
+            }
+        }, refundId);
     }
 
     private byte[] randomBytes(int n) {

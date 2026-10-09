@@ -110,8 +110,17 @@ class RefundFlowTest {
         assertEquals("REFUNDED", peers.statusOf(p.id()));
         assertTrue(jdbc.queryForObject("select payment_synced from refunds where id = ?", Boolean.class, id));
 
-        List<String> events = jdbc.queryForList("select event_type from outbox_events where aggregate_id = ? order by created_at", String.class, id);
+        List<String> events = jdbc.queryForList("select event_type from outbox_events where aggregate_id = ? order by occurred_at", String.class, id);
         assertEquals(List.of("refund.created", "refund.success"), events);
+        JsonNode env = mapper.readTree(jdbc.queryForObject(
+                "select payload from outbox_events where aggregate_id = ? and event_type = 'refund.success'", String.class, id));
+        assertEquals("refund.success", env.path("eventType").asText());
+        assertEquals(merchant.toString(), env.path("merchantId").asText());
+        assertEquals(id.toString(), env.path("aggregateId").asText());
+        assertEquals(p.id().toString(), env.path("payload").path("paymentId").asText());
+        assertEquals("INR", env.path("payload").path("currency").asText());
+        assertEquals(10000, env.path("payload").path("amount").asLong());
+        assertFalse(env.path("eventId").asText().isBlank());
         mvc.perform(api(MockMvcRequestBuilders.get("/api/v1/refunds/" + id), merchant)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("SUCCESS"));
     }
