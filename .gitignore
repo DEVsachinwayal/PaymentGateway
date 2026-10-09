@@ -12,3 +12,5 @@ dist/
 *.jks
 .run/
 frontend/.vite/
+performance/data/
+performance/results/
