@@ -31,7 +31,7 @@ User communicates in Marathi/English. User asked: build the whole project per sp
 | M10 | Ledger | DONE (ledger-service 8089; 11 tests; events delivered by M12 Kafka, HTTP meanwhile) |
 | M11 | Settlement + Reconciliation | DONE (settlement-service 8090; 10 tests; PayU auto-fetch external; import API for evidence) |
 | M12 | Kafka/Redis/Notifications/DLQ | DONE (outbox->Kafka, ledger+notification consumers, DLT; email + extra Redis use deferred) |
-| M13 | Security + Observability | todo |
+| M13 | Security + Observability | DONE (see docs/SECURITY.md, docs/OBSERVABILITY.md; scanning in CI is M15) |
 | M14 | Performance (JMeter) | todo |
 | M15 | OCI + CI/CD (needs user's OCI account) | todo |
 | M16 | Release readiness | todo |
@@ -53,11 +53,11 @@ Frontend (React merchant dashboard) is built incrementally alongside M3..M11.
 - After editing tests use `mvn clean test` for that module (stale compiled classes once hid a new test).
 - PayU TEST key/salt are in `.env` (verified: PayU accepted our signature). Never print them.
 - **PENDING (user action):** one real sandbox payment through the browser. A payment (id in `.run/last-payment-id`, link in `.run/last-checkout-url`, expires 30 min) was created; if expired create a new one: register/login -> POST /api/v1/merchants -> POST /api/v1/api-keys -> POST /api/v1/orders -> POST /api/v1/payments -> POST /api/v1/payments/{id}/checkout (all with Idempotency-Key where required), open `checkoutUrl`, pay with PayU test instruments (docs/PAYU_INTEGRATION.md), land on /payment-result, then check `GET /api/v1/payments/{id}/status` (expect SUCCESS, history PENDING->PROCESSING->SUCCESS) and tables `webhook_events`, `verification_log`, `provider_attempts`.
-- Live event-pipeline check (dev only, SIMULATES the provider result with the internal token): `bash scripts/smoke-events.sh` -> payment.success -> Kafka -> ledger + signed merchant webhook. All 9 checks passed on 2026-10-09. 12 services share one Postgres: dev-start sets Hikari pool 5 each (default 10 x 12 > max_connections 100).
+- Auth is RS256 now: run `bash scripts/gen-jwt-keys.sh` once (writes JWT_PRIVATE_KEY/JWT_PUBLIC_KEY into .env). Gateway health/metrics are on :8180 (not 8080). Live event-pipeline check (dev only, SIMULATES the provider result with the internal token): `bash scripts/smoke-events.sh` -> payment.success -> Kafka -> ledger + signed merchant webhook. All 9 checks passed on 2026-10-09. 12 services share one Postgres: dev-start sets Hikari pool 5 each (default 10 x 12 > max_connections 100).
 - Tip when scripting JSON: use `grep -o '"id":"[^"]*"' | head -1` (first match); a greedy sed picked the nested customer id once.
 
 ## NEXT STEPS (in order)
 1. Finish/verify the real PayU sandbox payment (above); fix whatever it reveals (callback field names, hash with real data).
 2. M9 Refund DONE (see docs/REFUNDS.md). Dashboard Refunds screens still TODO. First real sandbox refund must confirm PayU check_action_status JSON shape.
-3. M10 Ledger + M11 Settlement DONE. M12 DONE. Next: M13 security/observability, M14 JMeter, M15 OCI/CI-CD, M16 release docs.
+3. M10 Ledger + M11 Settlement DONE. M12 + M13 DONE. Next: M14 JMeter, M15 OCI/CI-CD, M16 release docs.
 4. React dashboard v1 is DONE (frontend/, branch feature/frontend: login, onboarding, overview, payments+timeline, orders, API keys, webhooks, settings; run `cd frontend && npm install && npm run dev` -> :5173, proxies /api to gateway). TODO there: refunds, settlements, webhook delivery history, team/roles screens (need backend), server-side stats endpoint. Phase 2 (outside spec): payment links, invoices, QR, subscriptions. Still open: ops APIs (activate merchant, grant roles), fill the stub docs (ARCHITECTURE, SERVICES, DATABASE, SECURITY, TESTING...).

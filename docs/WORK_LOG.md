@@ -129,3 +129,10 @@
 - notification-service (8091, DB apg_notification): signed merchant webhooks, retries/backoff, DEAD, resend, delivery history API, SSRF guard. Tests 12.
 - merchant-service: internal webhook-subscriber lookup. Gateway: /api/v1/webhook-deliveries/** (15 tests).
 - Docs: EVENTS.md, SERVICES.md. Not done: email channel, Redis beyond rate limit.
+
+## 2026-10-09 – M13 security + observability (branches feature/common-observability, auth-service, api-gateway, common-audit)
+- libs/apg-observability (shared with the reactive gateway): masked + correlation-aware logs (JSON in prod), Prometheus, OTel tracing (export off until APG_TRACING_ENDPOINT), outbound trace/correlation forwarding.
+- Business metrics + backlog gauges + DLQ counters in every service; Prometheus + Grafana dashboard + 16 alert rules (promtool-checked) under infrastructure/observability, compose profile `observability`. Verified live: 12/12 targets (auth fixed).
+- RS256 access tokens (auth-service) + gateway JwtVerifier (kid rotation, algorithm confusion tests, live-verified); scripts/gen-jwt-keys.sh; gateway actuator on internal port 8180; no-store + security-header test.
+- Append-only audit trail in merchant/refund/settlement/ledger/notification + merchant activity log API.
+- Docs: OBSERVABILITY.md, SECURITY.md. Open: dependency/secret scanning (M15 CI), operator RBAC, mTLS, JMeter (M14).
