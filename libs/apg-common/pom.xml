@@ -17,6 +17,7 @@
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-actuator</artifactId></dependency>
     <!-- used by IdempotencyService; only active in services that have a JdbcTemplate -->
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-jdbc</artifactId></dependency>
+    <dependency><groupId>com.apg</groupId><artifactId>apg-observability</artifactId><version>${project.version}</version></dependency>
     <!-- outbox publisher (events -> Kafka): optional, only active in services that also depend on spring-kafka -->
     <dependency><groupId>org.springframework.kafka</groupId><artifactId>spring-kafka</artifactId><optional>true</optional></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>

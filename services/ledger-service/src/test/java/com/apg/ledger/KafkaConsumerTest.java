@@ -38,6 +38,7 @@ class KafkaConsumerTest {
 
     @Autowired KafkaTemplate<String, String> template;
     @Autowired JdbcTemplate jdbc;
+    @Autowired io.micrometer.core.instrument.MeterRegistry meters;
 
     private String event(String type, UUID eventId, UUID aggregate, UUID merchant, Object amount) {
         return "{\"eventId\":\"" + eventId + "\",\"eventType\":\"" + type + "\",\"version\":1,\"occurredAt\":\"2026-10-09T10:00:00Z\",\"aggregateId\":\""
@@ -88,6 +89,8 @@ class KafkaConsumerTest {
 
         assertEquals(1, txCount(payment), "redelivery must not post twice");
         assertEquals(0, txCount(badAggregate));
+        assertEquals(2.0, meters.counter("apg_dlq_records_total", "topic", "payment.success", "service", "ledger").count(), "dead-lettered records are counted");
+        assertTrue(meters.counter("apg_ledger_postings_total", "type", "CAPTURE").count() >= 1);
         List<ConsumerRecord<String, String>> parked = dlt("payment.success.DLT", 2);
         assertEquals(2, parked.size(), "both poison records are on the dead-letter topic");
         assertTrue(parked.stream().anyMatch(r -> r.value().equals("this is not json")));

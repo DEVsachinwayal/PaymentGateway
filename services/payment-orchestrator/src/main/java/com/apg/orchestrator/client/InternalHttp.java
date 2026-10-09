@@ -21,7 +21,7 @@ abstract class InternalHttp {
         HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
         JdkClientHttpRequestFactory f = new JdkClientHttpRequestFactory(http);
         f.setReadTimeout(readTimeout);
-        this.client = RestClient.builder().baseUrl(baseUrl).requestFactory(f).defaultHeader("X-Internal-Token", internalToken).build();
+        this.client = RestClient.builder().requestInterceptor(com.apg.common.web.OutboundHeaders.INSTANCE).baseUrl(baseUrl).requestFactory(f).defaultHeader("X-Internal-Token", internalToken).build();
         this.mapper = mapper;
     }
 

@@ -52,6 +52,16 @@ public class WebhookService {
         this.clock = clock;
     }
 
+
+    private io.micrometer.core.instrument.MeterRegistry meters;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setMeters(io.micrometer.core.instrument.MeterRegistry meters) { this.meters = meters; }
+
+    private void count(String name, String... tags) {
+        if (meters != null) meters.counter(name, tags).increment();
+    }
+
     public Outcome handle(String provider, Map<String, String> fields) {
         Verification v = peers.verifyCallback(provider, fields);      // 404 unknown provider, 503 if verifier is down
         Instant now = clock.instant();
@@ -60,6 +70,7 @@ public class WebhookService {
                     INSERT INTO webhook_events (id, provider, fingerprint, provider_reference, authentic, status, last_result, created_at)
                     VALUES (?,?,?,?,false,'REJECTED',?,?)""", UUID.randomUUID(), provider, UUID.randomUUID().toString().replace("-", ""),
                     truncate(fields.get("txnid"), 60), truncate(v.reason(), 300), Timestamp.from(now));
+            count("apg_webhook_callbacks_total", "provider", provider, "result", "rejected");
             return new Outcome(false, false, null, null);
         }
 
@@ -76,6 +87,7 @@ public class WebhookService {
                 Timestamp.from(now));
 
         boolean duplicate = inserted == 0;
+        count("apg_webhook_callbacks_total", "provider", provider, "result", duplicate ? "duplicate" : "accepted");
         if (!duplicate) {
             jdbc.update("INSERT INTO outbox_events (id, event_type, aggregate_id, payload, occurred_at) VALUES (?,?,?,?,?)",
                     UUID.randomUUID(), "webhook.received", id, envelope(id, provider, reference, v.status()), Timestamp.from(now));
@@ -131,6 +143,7 @@ public class WebhookService {
     }
 
     private void attempt(UUID eventId, int no, String outcome, String detail, Instant now) {
+        count("apg_webhook_processing_total", "outcome", outcome);
         jdbc.update("INSERT INTO webhook_delivery_attempts (event_id, attempt_no, outcome, detail, created_at) VALUES (?,?,?,?,?)",
                 eventId, no, outcome, truncate(detail, 300), Timestamp.from(now));
     }

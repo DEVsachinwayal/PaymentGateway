@@ -1,0 +1,94 @@
+# Alert rules (spec 21). Thresholds are starting points: tune them with real traffic in M14.
+groups:
+  - name: apg-payments
+    rules:
+      - alert: ServiceDown
+        expr: up{job="apg"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.instance }} is not answering metrics scrapes"}
+      - alert: PaymentFailureRateHigh
+        expr: |
+          sum(rate(apg_payment_transitions_total{to="FAILED"}[10m]))
+            / sum(rate(apg_payment_transitions_total{to=~"SUCCESS|FAILED"}[10m])) > 0.3
+          and sum(increase(apg_payment_transitions_total{to=~"SUCCESS|FAILED"}[10m])) >= 10
+        for: 10m
+        labels: {severity: critical}
+        annotations: {summary: "More than 30% of finished payments are failing"}
+      - alert: PaymentsStuckUnknown
+        expr: sum(increase(apg_payment_transitions_total{to="VERIFY_REQUIRED"}[30m])) > 0
+        for: 30m
+        labels: {severity: warning}
+        annotations: {summary: "Payments are landing in VERIFY_REQUIRED (provider answers unclear)"}
+      - alert: ProviderErrorsHigh
+        expr: |
+          sum by (provider) (rate(apg_provider_calls_total{outcome=~"ERROR|UNKNOWN"}[5m]))
+            / sum by (provider) (rate(apg_provider_calls_total[5m])) > 0.2
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "Provider {{ $labels.provider }} error rate above 20% (outage or rate limiting)"}
+      - alert: ProviderSlow
+        expr: histogram_quantile(0.95, sum by (le, provider) (rate(apg_provider_call_seconds_bucket[5m]))) > 5
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "Provider {{ $labels.provider }} p95 latency above 5 s"}
+      - alert: Http5xxHigh
+        expr: |
+          sum by (application) (rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+            / sum by (application) (rate(http_server_requests_seconds_count[5m])) > 0.05
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.application }} is returning more than 5% 5xx"}
+  - name: apg-events
+    rules:
+      - alert: OutboxLagging
+        expr: apg_outbox_oldest_unpublished_seconds > 120
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.application }} cannot publish events to Kafka (oldest unpublished > 2 min)"}
+      - alert: DeadLetterGrowth
+        expr: sum by (service, topic) (increase(apg_dlq_records_total[15m])) > 0
+        labels: {severity: critical}
+        annotations: {summary: "Records were parked on the dead-letter topic {{ $labels.topic }}.DLT ({{ $labels.service }})"}
+      - alert: KafkaConsumerLag
+        expr: max by (application) (kafka_consumer_fetch_manager_metrics_records_lag_max) > 1000
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.application }} consumer lag above 1000 records"}
+  - name: apg-webhooks
+    rules:
+      - alert: ProviderCallbackBacklog
+        expr: apg_webhook_backlog > 20 or apg_webhook_oldest_pending_seconds > 600
+        for: 10m
+        labels: {severity: critical}
+        annotations: {summary: "Provider callbacks are piling up (webhook lag)"}
+      - alert: ProviderCallbackDead
+        expr: apg_webhook_dead > 0
+        labels: {severity: critical}
+        annotations: {summary: "Provider callbacks exhausted their retries"}
+      - alert: MerchantWebhookBacklog
+        expr: apg_webhook_delivery_backlog > 200 or apg_webhook_delivery_oldest_pending_seconds > 3600
+        for: 15m
+        labels: {severity: warning}
+        annotations: {summary: "Merchant webhook deliveries are not draining"}
+  - name: apg-money
+    rules:
+      - alert: RefundNeedsOperator
+        expr: apg_refund_verify_required > 0
+        for: 30m
+        labels: {severity: critical}
+        annotations: {summary: "A refund has an unclear provider outcome and reserves money until an operator resolves it"}
+      - alert: RefundStuck
+        expr: apg_refund_oldest_in_flight_seconds > 3600
+        labels: {severity: warning}
+        annotations: {summary: "A refund has been in flight for more than an hour"}
+      - alert: ReconciliationMismatch
+        expr: apg_reconciliation_open_exceptions > 0
+        for: 1h
+        labels: {severity: critical}
+        annotations: {summary: "Open reconciliation exceptions: provider and APG records disagree"}
+      - alert: SettlementNotReconciled
+        expr: apg_settlements_unreconciled > 0
+        for: 6h
+        labels: {severity: warning}
+        annotations: {summary: "A provider settlement batch is still not reconciled"}

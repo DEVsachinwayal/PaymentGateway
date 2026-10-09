@@ -52,6 +52,15 @@ public class NotificationService {
     private final ObjectMapper mapper;
     private final Clock clock;
 
+    private io.micrometer.core.instrument.MeterRegistry meters;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setMeters(io.micrometer.core.instrument.MeterRegistry meters) { this.meters = meters; }
+
+    private void count(String name, String... tags) {
+        if (meters != null) meters.counter(name, tags).increment();
+    }
+
     public NotificationService(JdbcTemplate jdbc, TransactionTemplate tx, MerchantDirectory directory, WebhookSender sender,
                                NotificationProperties props, ObjectMapper mapper, Clock clock) {
         this.jdbc = jdbc;
@@ -142,6 +151,7 @@ public class NotificationService {
     private void finishAttempt(Job job, WebhookSender.Result r) {
         Instant now = clock.instant();
         int attemptNo = job.attempts() + 1;
+        count("apg_webhook_delivery_total", "outcome", r.outcome());
         tx.executeWithoutResult(t -> {
             jdbc.update("INSERT INTO notification_attempts (job_id, attempt_no, outcome, http_status, detail, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
                     job.id(), attemptNo, r.outcome(), r.httpStatus(), truncate(r.detail(), 300), r.durationMs(), Timestamp.from(now));

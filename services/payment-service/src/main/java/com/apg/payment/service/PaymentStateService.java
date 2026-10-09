@@ -29,14 +29,16 @@ public class PaymentStateService {
     private final OutboxRepository outbox;
     private final ObjectMapper mapper;
     private final Clock clock;
+    private final io.micrometer.core.instrument.MeterRegistry meters;
 
     public PaymentStateService(PaymentRepository payments, StateHistoryRepository history, OutboxRepository outbox,
-                               ObjectMapper mapper, Clock clock) {
+                               ObjectMapper mapper, Clock clock, io.micrometer.core.instrument.MeterRegistry meters) {
         this.payments = payments;
         this.history = history;
         this.outbox = outbox;
         this.mapper = mapper;
         this.clock = clock;
+        this.meters = meters;
     }
 
     /** Records the very first state (CREATED) of a new payment. */
@@ -68,6 +70,10 @@ public class PaymentStateService {
             throw new ApiException(HttpStatus.CONFLICT, "CONCURRENT_MODIFICATION", "Payment was modified concurrently; retry");
         }
         history.save(new StateHistory(p.getId(), from, to, reason, source, correlationId(), now));
+        meters.counter("apg_payment_transitions_total", "from", from.name(), "to", to.name(), "source", source).increment();
+        if ((to == PaymentStatus.SUCCESS || to == PaymentStatus.FAILED) && p.getCreatedAt() != null) {
+            meters.timer("apg_payment_completion_seconds", "status", to.name()).record(java.time.Duration.between(p.getCreatedAt(), now));
+        }
         String event = switch (to) {
             case PROCESSING -> "payment.processing";
             case SUCCESS -> "payment.success";

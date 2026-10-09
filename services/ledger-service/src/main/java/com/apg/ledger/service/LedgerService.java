@@ -34,6 +34,15 @@ public class LedgerService {
     private final JdbcTemplate jdbc;
     private final Clock clock;
 
+    private io.micrometer.core.instrument.MeterRegistry meters;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setMeters(io.micrometer.core.instrument.MeterRegistry meters) { this.meters = meters; }
+
+    private void count(String name, String... tags) {
+        if (meters != null) meters.counter(name, tags).increment();
+    }
+
     public LedgerService(JdbcTemplate jdbc, Clock clock) {
         this.jdbc = jdbc;
         this.clock = clock;
@@ -62,6 +71,7 @@ public class LedgerService {
             jdbc.update("INSERT INTO ledger_entries (transaction_id, account_id, side, amount, currency, created_at) VALUES (?, ?, ?, ?, ?, ?)",
                     txId, account, l.side().name(), l.amount(), p.currency(), Timestamp.from(now));
         }
+        count("apg_ledger_postings_total", "type", p.txType());
         return new Result(txId, false);
     }
 

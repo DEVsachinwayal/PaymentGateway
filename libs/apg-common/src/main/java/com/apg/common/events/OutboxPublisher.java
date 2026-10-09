@@ -35,6 +35,7 @@ public class OutboxPublisher implements SmartLifecycle {
     private final int batchSize;
     private final long intervalMillis;
     private ScheduledExecutorService scheduler;
+    private io.micrometer.core.instrument.MeterRegistry meters;
 
     public OutboxPublisher(JdbcTemplate jdbc, TransactionTemplate tx, KafkaTemplate<String, String> kafka, Clock clock,
                            int batchSize, long intervalMillis) {
@@ -44,6 +45,13 @@ public class OutboxPublisher implements SmartLifecycle {
         this.clock = clock;
         this.batchSize = batchSize;
         this.intervalMillis = intervalMillis;
+    }
+
+    public void setMeters(io.micrometer.core.instrument.MeterRegistry meters, com.apg.common.metrics.DbGauges gauges) {
+        this.meters = meters;
+        gauges.register("apg_outbox_unpublished", "Events waiting to be published to Kafka", "SELECT COUNT(*) FROM outbox_events WHERE published_at IS NULL");
+        gauges.register("apg_outbox_oldest_unpublished_seconds", "Age of the oldest unpublished event (publishing lag)",
+                "SELECT COALESCE(EXTRACT(EPOCH FROM (now() - MIN(occurred_at))), 0) FROM outbox_events WHERE published_at IS NULL");
     }
 
     /** @return number of events published in this round */
@@ -66,9 +74,11 @@ public class OutboxPublisher implements SmartLifecycle {
                     break;
                 } catch (Exception e) {
                     log.warn("publishing event {} ({}) failed, will retry: {}", r.id(), r.type(), e.toString());
+                    if (meters != null) meters.counter("apg_outbox_publish_failures_total", "event", r.type()).increment();
                     break;                                    // keep order: nothing after this event is sent before it
                 }
                 jdbc.update("UPDATE outbox_events SET published_at = ? WHERE id = ?", Timestamp.from(clock.instant()), r.id());
+                if (meters != null) meters.counter("apg_outbox_published_total", "event", r.type()).increment();
                 sent++;
             }
             return sent;

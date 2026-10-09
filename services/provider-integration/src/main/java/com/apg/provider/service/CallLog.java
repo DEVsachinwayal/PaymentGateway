@@ -15,14 +15,22 @@ public class CallLog {
     private static final Logger log = LoggerFactory.getLogger(CallLog.class);
     private final JdbcTemplate jdbc;
     private final Clock clock;
+    private io.micrometer.core.instrument.MeterRegistry meters;
 
     public CallLog(JdbcTemplate jdbc, Clock clock) {
         this.jdbc = jdbc;
         this.clock = clock;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setMeters(io.micrometer.core.instrument.MeterRegistry meters) { this.meters = meters; }
+
     public void record(String provider, String operation, String reference, String outcome, Integer httpStatus,
                        long latencyMs, String detail) {
+        if (meters != null) {
+            meters.counter("apg_provider_calls_total", "provider", provider, "operation", operation, "outcome", outcome).increment();
+            meters.timer("apg_provider_call_seconds", "provider", provider, "operation", operation).record(java.time.Duration.ofMillis(Math.max(0, latencyMs)));
+        }
         try {
             jdbc.update("""
                     INSERT INTO provider_attempts (provider, operation, reference, outcome, http_status, latency_ms, detail, correlation_id, created_at)

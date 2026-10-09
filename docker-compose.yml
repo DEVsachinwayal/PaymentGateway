@@ -48,5 +48,24 @@ services:
       timeout: 10s
       retries: 10
 
+  # optional: `docker compose --profile observability up -d`  (Prometheus :9090, Grafana :3000 admin/admin on first start - change it)
+  prometheus:
+    profiles: ["observability"]
+    image: prom/prometheus:v2.55.1
+    ports: ["9090:9090"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes:
+      - ./infrastructure/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+
+  grafana:
+    profiles: ["observability"]
+    image: grafana/grafana:11.3.1
+    ports: ["3000:3000"]
+    depends_on: [prometheus]
+    volumes:
+      - ./infrastructure/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infrastructure/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
 volumes:
   pgdata:

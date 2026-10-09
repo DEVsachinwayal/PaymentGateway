@@ -2,6 +2,8 @@ package com.apg.common.web;
 
 import com.apg.common.api.GlobalExceptionHandler;
 import com.apg.common.idempotency.IdempotencyService;
+import com.apg.common.metrics.DbGauges;
+import io.micrometer.core.instrument.MeterRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,7 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-@AutoConfiguration(after = JdbcTemplateAutoConfiguration.class)
+@AutoConfiguration(after = {JdbcTemplateAutoConfiguration.class, org.springframework.boot.actuate.autoconfigure.metrics.CompositeMeterRegistryAutoConfiguration.class})
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class ApgCommonAutoConfiguration {
     @Bean CorrelationIdFilter correlationIdFilter() { return new CorrelationIdFilter(); }
@@ -46,5 +48,13 @@ public class ApgCommonAutoConfiguration {
     @ConditionalOnMissingBean
     IdempotencyService idempotencyService(JdbcTemplate jdbc, ObjectMapper mapper) {
         return new IdempotencyService(jdbc, mapper);
+    }
+
+    /** Lets a service expose backlog-style gauges computed from its own database. */
+    @Bean
+    @ConditionalOnBean({JdbcTemplate.class, MeterRegistry.class})
+    @ConditionalOnMissingBean
+    DbGauges dbGauges(JdbcTemplate jdbc, MeterRegistry registry) {
+        return new DbGauges(jdbc, registry);
     }
 }

@@ -21,6 +21,7 @@
   </properties>
 
   <modules>
+    <module>libs/apg-observability</module>
     <module>libs/apg-common</module>
     <module>services/auth-service</module>
     <module>services/api-gateway</module>

@@ -85,6 +85,15 @@ public class SettlementService {
     private final ObjectMapper mapper;
     private final Clock clock;
 
+    private io.micrometer.core.instrument.MeterRegistry meters;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setMeters(io.micrometer.core.instrument.MeterRegistry meters) { this.meters = meters; }
+
+    private void count(String name, String... tags) {
+        if (meters != null) meters.counter(name, tags).increment();
+    }
+
     public SettlementService(JdbcTemplate jdbc, TransactionTemplate tx, Peers peers, SettlementProperties props, ObjectMapper mapper, Clock clock) {
         this.jdbc = jdbc;
         this.tx = tx;
@@ -299,6 +308,7 @@ public class SettlementService {
                         VALUES (?, ?, ?, ?, 'OPEN', ?, ?, ?, ?) ON CONFLICT DO NOTHING""",
                         UUID.randomUUID(), settlementId, itemId, v.exceptionType(), truncate(v.reason(), 300), write(v.evidence()),
                         Timestamp.from(now), Timestamp.from(now));
+                count("apg_reconciliation_exceptions_total", "type", v.exceptionType());
                 outbox("reconciliation.exception", settlementId, Map.of("settlementId", settlementId, "itemId", itemId, "type", v.exceptionType()), now);
             }
             boolean hasApgRecord = v.paymentId() != null || v.refundId() != null;
@@ -327,6 +337,7 @@ public class SettlementService {
                     INSERT INTO reconciliation_exceptions (id, settlement_id, item_id, exc_type, status, reason, evidence, created_at, updated_at)
                     VALUES (?, ?, NULL, 'TOTAL_MISMATCH', 'OPEN', 'Provider totals do not equal the sum of its own items', ?, ?, ?) ON CONFLICT DO NOTHING""",
                     UUID.randomUUID(), settlementId, write(ev), Timestamp.from(now), Timestamp.from(now));
+            if (ins == 1) count("apg_reconciliation_exceptions_total", "type", "TOTAL_MISMATCH");
             if (ins == 1) outbox("reconciliation.exception", settlementId, Map.of("settlementId", settlementId, "type", "TOTAL_MISMATCH"), now);
         } else {
             jdbc.update("""

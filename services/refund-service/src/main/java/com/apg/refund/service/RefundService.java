@@ -65,6 +65,15 @@ public class RefundService {
     private final Clock clock;
     private final SecureRandom random = new SecureRandom();
 
+    private io.micrometer.core.instrument.MeterRegistry meters;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setMeters(io.micrometer.core.instrument.MeterRegistry meters) { this.meters = meters; }
+
+    private void count(String name, String... tags) {
+        if (meters != null) meters.counter(name, tags).increment();
+    }
+
     public RefundService(JdbcTemplate jdbc, TransactionTemplate tx, Peers peers, RefundProperties props, ObjectMapper mapper, Clock clock) {
         this.jdbc = jdbc;
         this.tx = tx;
@@ -105,6 +114,7 @@ public class RefundService {
                 id, merchantId, p.paymentId(), amount, p.currency(), truncate(req.reason(), 300), p.provider(), p.providerPaymentId(),
                 reference, Timestamp.from(now), Timestamp.from(now));
         outbox("refund.created", id, now);
+        count("apg_refund_total", "status", "CREATED");
         return get(merchantId, id);
     }
 
@@ -207,6 +217,7 @@ public class RefundService {
                     WHERE id = ? AND status IN ('CREATED', 'PROCESSING', 'VERIFY_REQUIRED')""",
                     status, truncate(message, 300), Timestamp.from(now), id);
             if (changed == 1) {
+                count("apg_refund_total", "status", status);
                 attempt(id, kind, outcome, detail, now);
                 outbox("SUCCESS".equals(status) ? "refund.success" : "refund.failed", id, now);
             }

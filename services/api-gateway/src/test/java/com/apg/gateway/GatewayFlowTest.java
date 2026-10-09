@@ -33,7 +33,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "management.server.port=0")
+@org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability
 @Import(GatewayFlowTest.ExtraRoutes.class)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class GatewayFlowTest {
@@ -287,9 +288,18 @@ class GatewayFlowTest {
         assertTrue(limited > 0, "expected at least one 429 after exceeding burst");
     }
 
+    @org.springframework.boot.test.web.server.LocalManagementPort int managementPort;
+
     @Test @Order(10)
-    void healthIsPublic() {
-        web.get().uri("/actuator/health").exchange().expectStatus().isOk()
-                .expectBody().jsonPath("$.status").isEqualTo("UP");
+    void actuatorIsOnTheInternalPortOnlyAndExposesMetrics() {
+        // never on the public port: no health details, no metrics for the internet
+        web.get().uri("/actuator/health").exchange().expectStatus().isNotFound();
+        web.get().uri("/actuator/prometheus").exchange().expectStatus().isNotFound();
+
+        org.springframework.test.web.reactive.server.WebTestClient mgmt =
+                org.springframework.test.web.reactive.server.WebTestClient.bindToServer().baseUrl("http://localhost:" + managementPort).build();
+        mgmt.get().uri("/actuator/health").exchange().expectStatus().isOk().expectBody().jsonPath("$.status").isEqualTo("UP");
+        String metrics = new String(mgmt.get().uri("/actuator/prometheus").exchange().expectStatus().isOk().expectBody().returnResult().getResponseBody());
+        assertTrue(metrics.contains("jvm_memory_used_bytes") && metrics.contains("http_server_requests"), "prometheus text format with JVM and HTTP metrics");
     }
 }
