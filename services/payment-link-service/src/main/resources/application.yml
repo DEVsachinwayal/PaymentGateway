@@ -1,0 +1,56 @@
+server:
+  port: 8092
+
+spring:
+  application:
+    name: payment-link-service
+  datasource:
+    url: ${PAYMENTLINK_DB_URL:jdbc:postgresql://localhost:5433/apg_paymentlink}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  jackson:
+    deserialization:
+      accept-float-as-int: false
+      fail-on-unknown-properties: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:                       # only used to park poison events on the dead-letter topics
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: payment-link-service
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+apg:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN}
+  events:
+    consumer:
+      enabled: ${APG_EVENTS_ENABLED:false}
+  paymentlink:
+    merchant-service-uri: ${MERCHANT_SERVICE_URI:http://localhost:8082}
+    order-service-uri: ${ORDER_SERVICE_URI:http://localhost:8083}
+    payment-service-uri: ${PAYMENT_SERVICE_URI:http://localhost:8084}
+    orchestrator-uri: ${ORCHESTRATOR_SERVICE_URI:http://localhost:8086}
+    # public address customers use (same host as the gateway); the link is <public-base-url>/pay/<code>
+    public-base-url: ${PUBLIC_BASE_URL:http://localhost:8080}
+    default-expiry-hours: 168
+    max-expiry-hours: 2160
+    max-amount: 100000000
+    # a started attempt blocks other attempts of a one-time link for this long unless the provider already finished it
+    in-flight-window: 45m
+    starting-window: 2m

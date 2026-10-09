@@ -35,5 +35,6 @@
     <module>services/ledger-service</module>
     <module>services/settlement-service</module>
     <module>services/notification-service</module>
+    <module>services/payment-link-service</module>
   </modules>
 </project>
