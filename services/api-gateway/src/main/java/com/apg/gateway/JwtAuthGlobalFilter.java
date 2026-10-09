@@ -2,11 +2,7 @@ package com.apg.gateway;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
-import javax.crypto.SecretKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -36,12 +32,12 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
             "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout");
     private static final List<String> API_KEY_PATHS = List.of("/api/v1/orders", "/api/v1/payments", "/api/v1/refunds");
 
-    private final SecretKey key;
+    private final JwtVerifier verifier;
     private final String internalToken;
     private final MerchantDirectory directory;
 
-    public JwtAuthGlobalFilter(GatewayProperties props, MerchantDirectory directory) {
-        this.key = Keys.hmacShaKeyFor(props.jwtSecret().getBytes(StandardCharsets.UTF_8));
+    public JwtAuthGlobalFilter(GatewayProperties props, MerchantDirectory directory, JwtVerifier verifier) {
+        this.verifier = verifier;
         this.internalToken = props.internalToken();
         this.directory = directory;
     }
@@ -91,7 +87,7 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
     private Mono<Void> jwtFlow(ServerWebExchange ex, GatewayFilterChain chain, String token) {
         Claims claims;
         try {
-            claims = Jwts.parser().verifyWith(key).requireIssuer("apg-auth").build().parseSignedClaims(token).getPayload();
+            claims = verifier.verify(token);
         } catch (JwtException | IllegalArgumentException e) {
             return ErrorResponses.write(ex, HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Invalid or expired token");
         }

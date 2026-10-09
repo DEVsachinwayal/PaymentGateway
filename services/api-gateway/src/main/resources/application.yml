@@ -26,8 +26,11 @@ management:
 
 apg:
   gateway:
-    # No default: must be injected, same value as auth-service. Never commit it.
-    jwt-secret: ${JWT_SECRET}
+    # RS256 (recommended): JWT_PUBLIC_KEY = base64 X.509 public key(s) of auth-service, comma separated during key rotation.
+    # The gateway can then verify tokens but never mint them, and a leaked HS secret is useless. If a public key is set the
+    # HS256 secret is ignored entirely. Fallback (dev): JWT_SECRET, same value as auth-service. Never commit either.
+    jwt-secret: ${JWT_SECRET:}
+    jwt-public-key: ${JWT_PUBLIC_KEY:}
     internal-token: ${INTERNAL_SERVICE_TOKEN}
     merchant-uri: ${MERCHANT_SERVICE_URI:http://localhost:8082}
     order-uri: ${ORDER_SERVICE_URI:http://localhost:8083}
