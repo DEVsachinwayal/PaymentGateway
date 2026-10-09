@@ -107,8 +107,18 @@ public class GatewayConfig {
                 .build();
     }
 
+    /**
+     * CORS protects the dashboard API. It must NOT apply to the pages a customer's browser is sent back to by the payment provider
+     * (the provider posts a form from its own origin to /api/v1/webhooks/**, and customers open /checkout and /payment-result):
+     * those requests carry a foreign Origin header and would otherwise be rejected with 403 "Invalid CORS request".
+     * Those endpoints are protected by their own means (provider signature, signed checkout token, no state change).
+     */
+    static boolean providerFacing(String path) {
+        return path.startsWith("/api/v1/webhooks/") || path.startsWith("/checkout/") || path.equals("/payment-result");
+    }
+
     @Bean
-    CorsWebFilter corsWebFilter(GatewayProperties props) {
+    org.springframework.web.server.WebFilter corsWebFilter(GatewayProperties props) {
         CorsConfiguration cors = new CorsConfiguration();
         cors.setAllowedOrigins(props.corsAllowedOrigins());
         cors.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
@@ -117,6 +127,7 @@ public class GatewayConfig {
         cors.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
         src.registerCorsConfiguration("/**", cors);
-        return new CorsWebFilter(src);
+        CorsWebFilter delegate = new CorsWebFilter(src);
+        return (exchange, chain) -> providerFacing(exchange.getRequest().getURI().getPath()) ? chain.filter(exchange) : delegate.filter(exchange, chain);
     }
 }
