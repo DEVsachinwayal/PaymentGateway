@@ -30,5 +30,6 @@
     <module>services/provider-integration</module>
     <module>services/payment-orchestrator</module>
     <module>services/webhook-service</module>
+    <module>services/refund-service</module>
   </modules>
 </project>

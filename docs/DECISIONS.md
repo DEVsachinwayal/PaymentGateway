@@ -51,3 +51,9 @@ Failover is only safe before the customer is sent to a provider, or after the pr
 The browser never sees API keys; the page only auto-submits provider-signed fields. Token = HMAC(attemptReference, expiry); expired => 410.
 ## D26 – Unknown amounts or provider doubts never settle as SUCCESS
 Amount mismatch between provider and our payment => VERIFY_REQUIRED for ops, not SUCCESS.
+## D27 – Refund row first, provider second, payment state derived
+The refund is persisted (CREATED) before PayU is called; payment status is recomputed from all refunds (REFUND_PENDING / PARTIALLY_REFUNDED / REFUNDED / SUCCESS) by an idempotent sync, so a crash or a payment-service outage can always be repaired.
+## D28 – In-flight and unknown refunds reserve the amount
+Over-refund is prevented by a per-payment advisory lock and sum(refunds <> FAILED). VERIFY_REQUIRED keeps the money reserved; only an operator resolution (or provider answer) releases it.
+## D29 – A queued refund is not a successful refund
+PayU's "request queued" => PROCESSING. SUCCESS needs an explicit success from `check_action_status`; unknown response shapes stay PROCESSING (backoff 60s..30m).

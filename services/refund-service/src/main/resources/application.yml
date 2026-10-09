@@ -1,0 +1,39 @@
+server:
+  port: 8088
+
+spring:
+  application:
+    name: refund-service
+  datasource:
+    url: ${REFUND_DB_URL:jdbc:postgresql://localhost:5433/apg_refund}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  jackson:
+    deserialization:
+      # money safety: 10.5 must never silently become 10; unknown fields are rejected
+      accept-float-as-int: false
+      fail-on-unknown-properties: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+apg:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN}
+  refund:
+    provider-service-uri: ${PROVIDER_SERVICE_URI:http://localhost:8085}
+    payment-service-uri: ${PAYMENT_SERVICE_URI:http://localhost:8084}
+    worker:
+      enabled: true
+      interval: 10s
+      # first provider status check after acceptance, then doubling up to max-backoff
+      first-check-delay: 60s
+      max-backoff: 30m
+      batch-size: 20
