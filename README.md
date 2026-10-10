@@ -61,6 +61,8 @@ bash scripts/docker-demo-down.sh            # add --wipe to delete the database 
 | `No space left on device` | free disk space, or move Docker's disk to another drive (Settings -> Resources -> Advanced -> Disk image location), then run the command again |
 | image download fails with EOF / network error | run the same command again; finished work is reused |
 | a container keeps restarting | `docker logs <container-name>`; see section 13.6 |
+| Grafana image will not download (network error) | PowerShell: `$env:APG_GRAFANA_IMAGE="grafana/grafana:latest"` (Git Bash: `export APG_GRAFANA_IMAGE=grafana/grafana:latest`), then run the command again |
+| Grafana graphs are empty | make a few payments first (sample shop), set the time range to "Last 15 minutes" |
 
 Everything else (running without Docker, tests, load test, all commands): the sections below and `docs/COMMANDS.md`.
 
@@ -321,10 +323,12 @@ docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compos
 | Dashboard | http://localhost:8000 (login `demo@apg.test` / `Demo-Passw0rd-2026`) |
 | Sample shop | http://localhost:4000 |
 | Payment link | printed by the script (`http://localhost:8000/pay/...`) |
+| Grafana / Prometheus | http://localhost:3000 (`admin` / `admin`, dashboard "APG overview") / http://localhost:9090 |
 
 Notes:
 - The first run takes 20-40 minutes (images are built); later runs start in 1-2 minutes. Give Docker Desktop at least 6-8 GB RAM and keep about 15 GB of disk free (images and build cache); move Docker's disk to another drive in Settings -> Resources -> Advanced -> Disk image location if C: is small.
-- Only the dashboard (8000) and the sample shop (4000) are published; the services talk to each other inside the Docker network. The database is also on host port 5433.
+- Grafana (3000) and Prometheus (9090) start together with the demo: Prometheus scrapes the 13 services by container name (`infrastructure/observability/prometheus-docker.yml`).
+- Besides those, the dashboard (8000), the sample shop (4000) and the database (5433) are published; the services talk to each other inside the Docker network. The database is also on host port 5433.
 - `docker-compose.demo.yml` switches on development-only options (webhooks to an http address, a seed job, the sample shop). Never use it on a public server.
 - `MERCHANT_ALLOW_INSECURE_WEBHOOK_URLS` and `NOTIFICATION_ALLOW_INSECURE_URLS` are the two switches it sets; the production compose files do not set them.
 - Database connections are capped at 5 per service and each JVM heap at 384 MB (`APG_DB_POOL_SIZE`, `APG_JAVA_OPTS` in `.env` override this).
