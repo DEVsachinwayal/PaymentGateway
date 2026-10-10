@@ -29,6 +29,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class LinkService {
     private static final Logger log = LoggerFactory.getLogger(LinkService.class);
     private static final String ALPHABET = "23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";   // no look-alikes (0/O, 1/l/I)
+    /** Methods a customer may choose on the page; anything else is refused. No choice = the provider page shows all methods. */
+    public static final Set<String> METHODS = Set.of("UPI", "CARD", "NETBANKING", "WALLET");
     private static final Set<String> PAID_STATUSES = Set.of("SUCCESS", "REFUND_PENDING", "PARTIALLY_REFUNDED", "REFUNDED");
     private static final Set<String> AT_PROVIDER = Set.of("PROCESSING", "VERIFY_REQUIRED", "AUTHORIZED", "CAPTURED");
 
@@ -140,7 +142,9 @@ public class LinkService {
     }
 
     /** Presses "Pay": creates the order, the payment and the hosted checkout, and returns the URL to send the customer to. */
-    public String start(String code) {
+    public String start(String code, String method) {
+        if (method != null && !method.isBlank() && !METHODS.contains(method)) throw new NotPayable("BAD_METHOD");
+        String chosen = method == null || method.isBlank() ? null : method;
         Row link = byCode(code).orElseThrow(() -> new NotPayable("NOT_FOUND"));
         refresh(link.id());                                              // learn about finished attempts first (best effort)
         UUID attemptId = UUID.randomUUID();
@@ -161,7 +165,7 @@ public class LinkService {
             String key = "plink-" + attemptId;
             UUID orderId = peers.createOrder(link.merchantId(), link.amount(), link.currency(), "LINK-" + link.code() + "-" + attemptId.toString().substring(0, 8),
                     link.description(), customer, key + "-order");
-            UUID paymentId = peers.createPayment(link.merchantId(), orderId, link.returnUrl(), key + "-payment");
+            UUID paymentId = peers.createPayment(link.merchantId(), orderId, link.returnUrl(), chosen, key + "-payment");
             jdbc.update("UPDATE link_attempts SET order_id = ?, payment_id = ?, state = 'OPEN', payment_status = 'CREATED', updated_at = ? WHERE id = ?",
                     orderId, paymentId, Timestamp.from(clock.instant()), attemptId);
             return peers.checkout(link.merchantId(), paymentId, key + "-checkout");

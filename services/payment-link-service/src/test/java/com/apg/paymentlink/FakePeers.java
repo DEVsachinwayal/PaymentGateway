@@ -21,6 +21,7 @@ public class FakePeers implements AutoCloseable {
 
     private final ObjectMapper mapper = new ObjectMapper();
     private final HttpServer server;
+    public final List<JsonNode> paymentBodies = new CopyOnWriteArrayList<>();
     public final List<OrderCall> orderCalls = new CopyOnWriteArrayList<>();
     public final AtomicInteger orders = new AtomicInteger();
     public final AtomicInteger payments = new AtomicInteger();
@@ -59,6 +60,7 @@ public class FakePeers implements AutoCloseable {
             reply(ex, 201, "{\"data\":{\"id\":\"" + UUID.randomUUID() + "\"}}");
         } else if (path.equals("/api/v1/payments")) {
             payments.incrementAndGet();
+            paymentBodies.add(mapper.readTree(raw));
             UUID id = UUID.randomUUID();
             paymentStatus.put(id, "CREATED");
             reply(ex, 201, "{\"data\":{\"id\":\"" + id + "\"}}");

@@ -47,14 +47,15 @@ public class PublicLinkController {
     }
 
     @PostMapping(value = "/pay/{code}/start")
-    ResponseEntity<String> start(@PathVariable String code) {
+    ResponseEntity<String> start(@PathVariable String code, @RequestParam(required = false) String method) {
         try {
-            String url = links.start(code);
+            String url = links.start(code, method);
             return ResponseEntity.status(HttpStatus.SEE_OTHER).location(URI.create(url)).header("Cache-Control", "no-store").header("Referrer-Policy", "no-referrer").build();
         } catch (NotPayable e) {
             return switch (e.kind) {
                 case "IN_PROGRESS" -> page(HttpStatus.CONFLICT, "Payment in progress", "<p class=\"warn\">A payment for this link is already in progress. If you just paid, wait a minute and refresh this page; otherwise you can try again in about 15 minutes (a payment that was not completed is released automatically).</p>");
                 case "NOT_FOUND" -> page(HttpStatus.NOT_FOUND, "Link not found", "<p>This payment link does not exist.</p>");
+                case "BAD_METHOD" -> page(HttpStatus.BAD_REQUEST, "Invalid choice", "<p class=\"warn\">That payment method is not available.</p><p><a href=\"/pay/" + esc(code) + "\">Back</a></p>");
                 case "PAID" -> page(HttpStatus.GONE, "Already paid", "<p class=\"ok\">This payment link has already been paid.</p>");
                 default -> page(HttpStatus.GONE, "Link not available", "<p class=\"warn\">This payment link is no longer active.</p>");
             };
@@ -73,8 +74,18 @@ public class PublicLinkController {
     }
 
     private String form(PublicLink l) {
-        return "<form method=\"post\" action=\"/pay/" + esc(l.code()) + "/start\"><button type=\"submit\">Pay " + esc(money(l.amount(), l.currency()))
-                + "</button></form><p class=\"fine\">You will be taken to our payment partner's secure page to pay by card, UPI or net banking. We never see your card details.</p>";
+        String amount = esc(money(l.amount(), l.currency()));
+        return "<form method=\"post\" action=\"/pay/" + esc(l.code()) + "/start\"><p class=\"how\">Choose how you want to pay</p><div class=\"methods\">"
+                + method("UPI", "UPI", "Pay with any UPI app")
+                + method("CARD", "Debit / Credit card", "Visa, Mastercard, RuPay")
+                + method("NETBANKING", "Net banking", "Pay from your bank account")
+                + method("WALLET", "Wallets", "Paytm, PhonePe and more")
+                + "</div><button type=\"submit\" class=\"alt\">Show all payment options (" + amount + ")</button></form>"
+                + "<p class=\"fine\">You will be taken to our payment partner's secure page. We never see your card details.</p>";
+    }
+
+    private static String method(String value, String title, String sub) {
+        return "<button type=\"submit\" name=\"method\" value=\"" + value + "\" class=\"method\"><b>" + esc(title) + "</b><span>" + esc(sub) + "</span></button>";
     }
 
     private static String contact(PublicLink l) {
@@ -90,8 +101,8 @@ public class PublicLinkController {
                 + "body{margin:0;min-height:100vh;display:grid;place-items:center;background:linear-gradient(160deg,#eef0ff,#f7f8fb);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#151a33}"
                 + "main{background:#fff;border-radius:18px;box-shadow:0 10px 40px rgba(30,30,80,.12);padding:32px;max-width:420px;width:calc(100% - 32px);text-align:center}"
                 + ".merchant{font-weight:600;color:#4f46e5;margin-bottom:6px}.desc{color:#6b7194;margin:4px 0 12px}.amount{font-size:40px;font-weight:700;letter-spacing:-.02em;margin:10px 0 22px}"
-                + "button{width:100%;padding:14px;border:0;border-radius:12px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-size:17px;font-weight:600;cursor:pointer}"
-                + ".fine{font-size:12px;color:#6b7194;margin-top:14px}.ok{color:#047857;font-weight:600}.warn{color:#b45309}a{color:#4f46e5}</style></head><body><main>" + body + "</main></body></html>";
+                + "button{font-family:inherit;width:100%;padding:14px;border:0;border-radius:12px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-size:17px;font-weight:600;cursor:pointer}"
+                + ".how{font-weight:600;margin:0 0 12px;text-align:left}.methods{display:grid;gap:10px;margin-bottom:12px}.method{display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:#fff;color:#151a33;border:1.5px solid #d9dcf0;font-size:16px;padding:14px 16px}.method span{font-size:12px;font-weight:400;color:#6b7194;margin-top:2px}.method:hover{border-color:#4f46e5;background:#f4f3ff}button.alt{background:none;color:#4f46e5;font-size:14px;padding:8px}.fine{font-size:12px;color:#6b7194;margin-top:14px}.ok{color:#047857;font-weight:600}.warn{color:#b45309}a{color:#4f46e5}</style></head><body><main>" + body + "</main></body></html>";
         return ResponseEntity.status(status).contentType(MediaType.TEXT_HTML)
                 .cacheControl(CacheControl.noStore())
                 .header(HttpHeaders.PRAGMA, "no-cache")

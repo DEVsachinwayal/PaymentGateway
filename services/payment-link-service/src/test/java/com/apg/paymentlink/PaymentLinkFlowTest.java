@@ -191,6 +191,23 @@ class PaymentLinkFlowTest {
         assertEquals("OPEN", jdbc.queryForObject("select a.state from link_attempts a join payment_links l on l.id = a.link_id where l.code = ? order by a.created_at desc limit 1", String.class, code));
     }
 
+    @Test void theCustomerCanChooseUpiCardNetBankingOrWalletAndItReachesThePayment() throws Exception {
+        String code = createOk(merchant, "{\"amount\":1000,\"currency\":\"INR\",\"oneTime\":false}").path("code").asText();
+        String html = page(code).andReturn().getResponse().getContentAsString();
+        for (String m : new String[]{"UPI", "CARD", "NETBANKING", "WALLET"}) assertTrue(html.contains("name=\"method\" value=\"" + m + "\""), m);
+        assertTrue(html.contains("Show all payment options"));
+        for (String m : new String[]{"UPI", "CARD", "NETBANKING", "WALLET"}) {
+            int before = peers.paymentBodies.size();
+            mvc.perform(MockMvcRequestBuilders.post("/pay/" + code + "/start").header("X-Internal-Token", TOKEN).param("method", m)).andExpect(status().isSeeOther());
+            assertEquals(m, peers.paymentBodies.get(before).path("paymentMethod").asText(), m);
+        }
+        int before = peers.paymentBodies.size();
+        pay(code).andExpect(status().isSeeOther());                // "show all": no method sent, the provider shows everything
+        assertTrue(peers.paymentBodies.get(before).path("paymentMethod").isMissingNode());
+        mvc.perform(MockMvcRequestBuilders.post("/pay/" + code + "/start").header("X-Internal-Token", TOKEN).param("method", "BITCOIN")).andExpect(status().isBadRequest());
+        mvc.perform(MockMvcRequestBuilders.post("/pay/" + code + "/start").header("X-Internal-Token", TOKEN).param("method", "upi; drop table")).andExpect(status().isBadRequest());
+    }
+
     @Test void theCustomerCannotChangeTheAmountOrTheMerchant() throws Exception {
         String code = createOk(merchant, BODY).path("code").asText();
         int before = peers.orderCalls.size();

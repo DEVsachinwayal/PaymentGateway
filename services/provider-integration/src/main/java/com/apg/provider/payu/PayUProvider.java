@@ -84,9 +84,23 @@ public class PayUProvider implements PaymentProvider {
         f.put("curl", r.failureUrl());
         f.put("udf1", udf1);
         f.put("hash", hash);
+        String enforced = enforcePaymethod(r.paymentMethod());
+        if (enforced != null) f.put("enforce_paymethod", enforced);        // not part of the request hash (PayU docs: enforce_paymethod)
         callLog.record(ID, "CREATE_PAYMENT", r.providerReference(), "OK", null, System.currentTimeMillis() - t0,
                 "amountMinor=" + r.amountMinor());
         return new CheckoutInstructions("POST", props.baseUrl() + "/_payment", f);
+    }
+
+    /** APG method -> PayU enforce_paymethod categories (pipe separated); null = show everything PayU offers. */
+    static String enforcePaymethod(String method) {
+        if (method == null) return null;
+        return switch (method) {
+            case "UPI" -> "upi";
+            case "CARD" -> "creditcard|debitcard";
+            case "NETBANKING" -> "netbanking";
+            case "WALLET" -> "cashcard";
+            default -> null;
+        };
     }
 
     // ---------------------------------------------------------------- status (verify_payment)

@@ -40,7 +40,20 @@ class PayUProviderTest {
     // ------------------------------------------------------------------ checkout
     private PaymentRequest req(String desc, String name, String email, String phone, String currency) {
         return new PaymentRequest("A1b2", 1000, currency, desc, name, email, phone, "pay-123",
-                "https://apg.example/cb/success", "https://apg.example/cb/failure");
+                "https://apg.example/cb/success", "https://apg.example/cb/failure", null);
+    }
+
+    @Test void paymentMethodLimitsTheHostedPageWithoutChangingTheHash() {
+        PaymentRequest any = req("Item", "Asha", "asha@example.com", "9876543210", "INR");
+        CheckoutInstructions all = provider.createPayment(any);
+        assertFalse(all.fields().containsKey("enforce_paymethod"), "no method chosen = PayU shows everything");
+        for (String[] c : new String[][]{{"UPI", "upi"}, {"CARD", "creditcard|debitcard"}, {"NETBANKING", "netbanking"}, {"WALLET", "cashcard"}}) {
+            PaymentRequest r = new PaymentRequest(any.providerReference(), any.amountMinor(), any.currency(), any.description(), any.customerName(), any.customerEmail(),
+                    any.customerPhone(), any.paymentId(), any.successUrl(), any.failureUrl(), c[0]);
+            CheckoutInstructions ci = provider.createPayment(r);
+            assertEquals(c[1], ci.fields().get("enforce_paymethod"), c[0]);
+            assertEquals(all.fields().get("hash"), ci.fields().get("hash"), "the method is not part of the signed hash");
+        }
     }
 
     @Test void checkoutFieldsCarryTheIndependentlyComputedHashAndNeverTheSalt() {

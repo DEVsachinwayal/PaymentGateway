@@ -61,10 +61,11 @@ public class Peers {
                 .contentType(MediaType.APPLICATION_JSON).body(body).retrieve().body(JsonNode.class).path("data").path("id").asText()));
     }
 
-    public UUID createPayment(UUID merchantId, UUID orderId, String returnUrl, String idemKey) {
+    public UUID createPayment(UUID merchantId, UUID orderId, String returnUrl, String paymentMethod, String idemKey) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("orderId", orderId.toString());
         if (returnUrl != null) body.put("returnUrl", returnUrl);
+        if (paymentMethod != null) body.put("paymentMethod", paymentMethod);
         return call(() -> UUID.fromString(payments.post().uri("/api/v1/payments").headers(h -> merchantHeaders(h, merchantId, idemKey))
                 .contentType(MediaType.APPLICATION_JSON).body(body).retrieve().body(JsonNode.class).path("data").path("id").asText()));
     }
