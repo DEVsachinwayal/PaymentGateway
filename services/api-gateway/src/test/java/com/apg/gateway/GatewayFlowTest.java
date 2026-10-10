@@ -279,6 +279,8 @@ class GatewayFlowTest {
         web.post().uri("/api/v1/webhooks/payu").header("Origin", "https://test.payu.in").bodyValue("txnid=A1")
                 .exchange().expectStatus().isOk();
         web.get().uri("/payment-result").header("Origin", "https://test.payu.in").exchange().expectStatus().isOk();
+        // a browser form post from the payment link page sends "Origin: null" (the page uses Referrer-Policy: no-referrer)
+        web.post().uri("/pay/AbCdEfGhJk/start").header("Origin", "null").exchange().expectStatus().isOk();
         // while a foreign website cannot call the merchant/dashboard API from a browser
         web.get().uri("/api/v1/orders/abc").header("Origin", "https://evil.example").header("Authorization", "Bearer sk_test_good.secret")
                 .exchange().expectStatus().isForbidden();
