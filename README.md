@@ -180,3 +180,66 @@ More: `docs/TROUBLESHOOTING.md`, `docs/DEMO_GUIDE.md` (12-minute demo flow, talk
 ## 12. Honest limits
 
 Sandbox only (no real money); PayU is the only provider (no failover); cloud deployment files (Docker images, GitHub Actions, OCI) are written but not run in a real cloud; settlement files are imported through an operator API (PayU auto-fetch needs a live account).
+
+---
+
+## 13. Running the project on another computer
+
+Two ways to move the project: a **zip of the whole folder** (includes `.env`) or **git clone** (then copy `.env` separately). `.env` holds all secrets, is git-ignored, and must never be pushed to GitHub, e-mailed or shared; delete it from the pen drive after copying.
+
+### 13.1 Install on the new computer (one time)
+
+| # | Software | Used for | Get it from |
+|---|---|---|---|
+| 1 | **Docker Desktop** (open it and wait until the engine is running) | PostgreSQL, Redis, Kafka | docker.com |
+| 2 | **Java JDK 21 or 25** | the 13 services | adoptium.net (Temurin) |
+| 3 | **Maven 3.9** | building the services | maven.apache.org (binary zip) |
+| 4 | **Node.js 22 LTS** | the dashboard | nodejs.org |
+| 5 | **Git for Windows** (includes Git Bash) | running the `.sh` scripts | git-scm.com |
+
+After installing:
+- Set `JAVA_HOME` to the JDK folder (Windows: Edit the system environment variables -> Environment Variables -> New) and add Maven's `bin` folder to `Path`.
+- Open a **new** Git Bash and check: `java -version`, `mvn -v`, `node -v`, `docker ps`. All four must work.
+- Needs about 8 GB free RAM and internet (Docker images, PayU sandbox).
+
+### 13.2 Get the project
+
+**Option 1: zip.** Zip the whole project folder on the old computer, copy it, extract it somewhere with a short path and no spaces or non-English characters (for example `D:\Project\AutonomousPaymentGateway`). Check that the hidden `.env` file is in the folder next to `README.md` (VS Code shows it). If `target/`, `node_modules/` or `.run/` came along they can stay, or be deleted to start clean.
+
+**Option 2: git clone.**
+```
+git clone https://github.com/rohanrk2810/AutonomousPaymentGateway.git
+cd AutonomousPaymentGateway
+cp /e/.env .          # .env from the pen drive (E: is an example drive letter)
+ls -a | grep .env     # must list .env
+```
+Without a copy of the old `.env`: `cp .env.example .env`, run `bash scripts/gen-jwt-keys.sh`, and fill the other values (random strong secrets, plus the PayU sandbox key and salt).
+
+### 13.3 Run
+
+In Git Bash, from the project folder:
+```
+cd frontend && npm install && cd ..    # dashboard packages, 2-3 minutes
+bash scripts/demo-up.sh                # first run 5-10 minutes (image downloads + build)
+```
+Then open http://localhost:5173 and log in with `demo@apg.test` / `Demo-Passw0rd-2026`. The sample shop is at http://localhost:4000. Test cards and UPI/net banking details are in section 6.
+
+Stop: `bash scripts/demo-down.sh` and `docker compose down`.
+
+### 13.4 Notes
+
+- The database does not travel with the code; the new computer starts empty and `demo-up.sh` seeds fresh demo data. (To move real data use `scripts/backup-postgres.sh`.)
+- Ports 8080-8092, 5173, 4000, 5433, 6379 and 9092 must be free.
+- Without PayU key/salt a real sandbox payment cannot start; `bash scripts/smoke-events.sh` still shows a simulated provider success locally (dev tool).
+
+### 13.5 If something goes wrong
+
+| Symptom | Fix |
+|---|---|
+| "Docker is not running" / `docker: command not found` | open Docker Desktop and wait until it is ready |
+| Build fails / `JAVA_HOME is not set` | set `JAVA_HOME`, open a new Git Bash |
+| `port is already allocated` | close the program using that port (8080, 5173, 4000, ...) |
+| `.env: No such file` or services will not start | `.env` is not in the project root (13.2) |
+| Services not healthy / out of memory | close other apps, `bash scripts/dev-stop.sh`, then `demo-up.sh` again |
+| Login says "not found" | restart the dashboard: `cd frontend && npm run dev`, then Ctrl+F5 |
+| Stale or corrupt build | `bash scripts/dev-stop.sh`, then `mvn clean` and `npm install`, start again |
