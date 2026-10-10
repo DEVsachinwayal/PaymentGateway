@@ -7,6 +7,63 @@ A payment gateway platform for merchants (think a small Razorpay). A merchant cr
 
 ---
 
+## Quick start on another laptop (only Docker Desktop needed)
+
+Nothing else has to be installed: no Java, Maven, Node, PostgreSQL, Redis or Kafka. Everything is built and run inside Docker.
+
+**1. Install** [Docker Desktop](https://www.docker.com/products/docker-desktop/) (keep "Use WSL 2" ticked), restart the computer, open Docker Desktop and wait until it says **Engine running**. Give it 6-8 GB RAM (Settings -> Resources). Needs about 15 GB free disk, 8 GB RAM, internet, and virtualization enabled in the BIOS.
+(Optional: Git for Windows if you want to use the `bash scripts/...` commands; PowerShell works without it.)
+
+**2. Extract** the project zip, for example to `D:\Project\AutonomousPaymentGateway`. The hidden `.env` file must be in that folder next to `README.md`.
+
+**3. Run** (use ONE of these):
+
+PowerShell:
+```
+cd D:\Project\AutonomousPaymentGateway
+docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml up -d --build
+```
+Git Bash:
+```
+cd /d/Project/AutonomousPaymentGateway
+bash scripts/docker-demo-up.sh
+```
+The first run takes 20-40 minutes (images are built); later runs take 1-2 minutes. Check with `docker ps` (all containers should become "healthy").
+
+**4. Open**
+
+| What | Address |
+|---|---|
+| Dashboard | http://localhost:8000 |
+| Login | `demo@apg.test` / `Demo-Passw0rd-2026` |
+| Sample shop | http://localhost:4000 |
+
+**5. Pay** (PayU sandbox, no real money): card `5123456789012346`, CVV `123`, any future expiry, OTP `123456`; UPI `anything@payu`; net banking user `payu` / password `payu`, OTP `123456`; wallet `7777777777`, OTP `888888`. More in section 6.
+
+**6. Stop** (the same way you started):
+
+PowerShell:
+```
+docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml down
+```
+Git Bash:
+```
+bash scripts/docker-demo-down.sh            # add --wipe to delete the database too
+```
+
+| Problem | Fix |
+|---|---|
+| `docker: command not found` / "cannot connect to the Docker daemon" | open Docker Desktop and wait for "Engine running" |
+| error about a value "set in .env" | `.env` is missing from the project folder |
+| `port is already allocated` | close the program using port 8000, 4000 or 5433 |
+| `No space left on device` | free disk space, or move Docker's disk to another drive (Settings -> Resources -> Advanced -> Disk image location), then run the command again |
+| image download fails with EOF / network error | run the same command again; finished work is reused |
+| a container keeps restarting | `docker logs <container-name>`; see section 13.6 |
+
+Everything else (running without Docker, tests, load test, all commands): the sections below and `docs/COMMANDS.md`.
+
+---
+
 ## 1. What it does
 
 | Feature | Where to see it |
