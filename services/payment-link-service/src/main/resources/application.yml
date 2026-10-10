@@ -52,5 +52,5 @@ apg:
     max-expiry-hours: 2160
     max-amount: 100000000
     # a started attempt blocks other attempts of a one-time link for this long unless the provider already finished it
-    in-flight-window: 45m
+    in-flight-window: 15m
     starting-window: 2m
