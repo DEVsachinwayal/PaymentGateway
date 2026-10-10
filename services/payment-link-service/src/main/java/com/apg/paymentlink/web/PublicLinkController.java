@@ -53,7 +53,7 @@ public class PublicLinkController {
             return ResponseEntity.status(HttpStatus.SEE_OTHER).location(URI.create(url)).header("Cache-Control", "no-store").header("Referrer-Policy", "no-referrer").build();
         } catch (NotPayable e) {
             return switch (e.kind) {
-                case "IN_PROGRESS" -> page(HttpStatus.CONFLICT, "Payment in progress", "<p class=\"warn\">A payment for this link is already in progress. If you just paid, wait a minute and refresh this page; otherwise try again in a few minutes.</p>");
+                case "IN_PROGRESS" -> page(HttpStatus.CONFLICT, "Payment in progress", "<p class=\"warn\">A payment for this link is already in progress. If you just paid, wait a minute and refresh this page; otherwise you can try again in about 15 minutes (a payment that was not completed is released automatically).</p>");
                 case "NOT_FOUND" -> page(HttpStatus.NOT_FOUND, "Link not found", "<p>This payment link does not exist.</p>");
                 case "PAID" -> page(HttpStatus.GONE, "Already paid", "<p class=\"ok\">This payment link has already been paid.</p>");
                 default -> page(HttpStatus.GONE, "Link not available", "<p class=\"warn\">This payment link is no longer active.</p>");
