@@ -14,6 +14,9 @@ POST form: key, command=verify_payment, var1=txnid, hash=sha512(key|verify_payme
 ## Refund (S2S)
 command=cancel_refund_transaction, var1=mihpayid, var2=unique refund token (<=23 chars), var3=amount "10.00", hash=sha512(key|cancel_refund_transaction|var1|SALT). status 1 = "Refund Request Queued" (+request id); poll refund status API.
 
+## Choosing the payment method
+APG passes the customer's choice (UPI / CARD / NETBANKING / WALLET) to PayU as `enforce_paymethod` (`upi`, `creditcard|debitcard`, `netbanking`, `cashcard`; pipe separated; NOT part of the request hash; source: docs.payu.in "Enforce Pay Method or Remove Category"). No choice = the field is omitted and PayU shows everything. Verified in the real sandbox with a headless browser: UPI opens PayU's UPI section (QR, Google Pay, PhonePe, BHIM, Paytm, "Enter any UPI ID"), card/net banking/wallet open their sections. The payment link page shows the four options plus "Show all payment options"; the dashboard "Collect payment" page has a method selector; API: `paymentMethod` on `POST /api/v1/payments`.
+
 ## Test instruments (docs.payu.in "Test Cards, UPI ID and Wallets")
 Net banking user/pass payu/payu OTP 123456; test VPAs anything@payu or 999999999@payu (UPI collect simulator https://pgsim01.payu.in/UPI-test-transaction/confirm/<txnid>); MasterCard 5123456789012346 CVV 123 OTP 123456 any future expiry; PayTM 7777777777 OTP 888888.
 

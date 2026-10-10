@@ -16,6 +16,7 @@ export default function NewPayment() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [method, setMethod] = useState<string>('')          // '' = let the customer choose on the payment page
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>(null)
   const [started, setStarted] = useState<Started | null>(null)
@@ -35,7 +36,7 @@ export default function NewPayment() {
         ...(description.trim() ? { description: description.trim() } : {}),
         ...((name.trim() || email.trim() || phone.trim()) ? { customer: { ...(name.trim() ? { name: name.trim() } : {}), ...(email.trim() ? { email: email.trim() } : {}), ...(phone.trim() ? { phone: phone.trim() } : {}) } } : {}),
       }, { 'Idempotency-Key': keys.current.order })
-      const payment = await api<Payment>('POST', '/api/v1/payments', { orderId: order.id }, { 'Idempotency-Key': keys.current.pay })
+      const payment = await api<Payment>('POST', '/api/v1/payments', { orderId: order.id, ...(method ? { paymentMethod: method } : {}) }, { 'Idempotency-Key': keys.current.pay })
       const co = await api<{ checkoutUrl: string }>('POST', `/api/v1/payments/${payment.id}/checkout`, {}, { 'Idempotency-Key': keys.current.checkout })
       setStarted({ payment, url: co.checkoutUrl })
       setStatus(payment.status)
@@ -72,6 +73,10 @@ export default function NewPayment() {
             <div className="field"><label htmlFor="p">Customer phone</label><input id="p" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={20} /></div>
           </div>
           <div className="field"><label htmlFor="e">Customer email</label><input id="e" type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={254} /></div>
+          <div className="field"><label>Payment method</label>
+            <div className="pill-toggle">{[['', 'Any'], ['UPI', 'UPI'], ['CARD', 'Card'], ['NETBANKING', 'Net banking'], ['WALLET', 'Wallet']].map(([v, l]) => (
+              <button type="button" key={v} className={method === v ? 'on' : ''} onClick={() => setMethod(v)}>{l}</button>))}</div>
+            <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>"Any" shows every option on the payment page.</div></div>
           <button className="btn primary" disabled={busy}>{busy ? 'Creating…' : 'Create payment link'}</button>
         </form>
       ) : (
