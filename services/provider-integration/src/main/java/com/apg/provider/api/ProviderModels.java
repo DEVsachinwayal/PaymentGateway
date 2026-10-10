@@ -20,7 +20,8 @@ public final class ProviderModels {
             @Size(max = 20) String customerPhone,
             @Size(max = 64) String paymentId,                                              // echoed back for correlation
             @NotBlank @Pattern(regexp = "^https://\\S+$|^http://localhost\\S*$") String successUrl,
-            @NotBlank @Pattern(regexp = "^https://\\S+$|^http://localhost\\S*$") String failureUrl) {}
+            @NotBlank @Pattern(regexp = "^https://\\S+$|^http://localhost\\S*$") String failureUrl,
+            @Pattern(regexp = "^(UPI|CARD|NETBANKING|WALLET)$") String paymentMethod) {}      // optional: limit the hosted page to one method
 
     /** What the browser must do to reach the provider's hosted checkout. */
     public record CheckoutInstructions(String method, String url, Map<String, String> fields) {}

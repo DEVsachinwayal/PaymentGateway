@@ -94,6 +94,7 @@ public class CheckoutService {
         m.put("paymentId", p.paymentId().toString());
         m.put("successUrl", callback);
         m.put("failureUrl", callback);
+        if (p.paymentMethod() != null) m.put("paymentMethod", p.paymentMethod());     // customer chose UPI/card/net banking/wallet
         return m;
     }
 }
