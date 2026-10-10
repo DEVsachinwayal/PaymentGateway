@@ -243,3 +243,31 @@ Stop: `bash scripts/demo-down.sh` and `docker compose down`.
 | Services not healthy / out of memory | close other apps, `bash scripts/dev-stop.sh`, then `demo-up.sh` again |
 | Login says "not found" | restart the dashboard: `cd frontend && npm run dev`, then Ctrl+F5 |
 | Stale or corrupt build | `bash scripts/dev-stop.sh`, then `mvn clean` and `npm install`, start again |
+
+### 13.6 Docker-only mode (no Java, Maven or Node on the computer)
+
+If the other computer has **only Docker Desktop** (plus Git Bash for the script, or just PowerShell for the raw command), the whole project runs from containers with one command. Java, Maven and Node are not needed: the images are built inside Docker.
+
+```
+bash scripts/docker-demo-up.sh          # builds 13 service images + dashboard, starts everything, seeds demo data
+bash scripts/docker-demo-down.sh        # stop (keeps data);  --wipe also deletes the database
+```
+Same thing without the script (PowerShell or Git Bash, from the project folder; `.env` must be present):
+```
+docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml up -d --build
+```
+
+| What | Where |
+|---|---|
+| Dashboard | http://localhost:8000 (login `demo@apg.test` / `Demo-Passw0rd-2026`) |
+| Sample shop | http://localhost:4000 |
+| Payment link | printed by the script (`http://localhost:8000/pay/...`) |
+
+Notes:
+- The first run takes 20-40 minutes (images are built); later runs start in 1-2 minutes. Give Docker Desktop at least 6-8 GB RAM and keep about 15 GB of disk free (images and build cache); move Docker's disk to another drive in Settings -> Resources -> Advanced -> Disk image location if C: is small.
+- Only the dashboard (8000) and the sample shop (4000) are published; the services talk to each other inside the Docker network. The database is also on host port 5433.
+- `docker-compose.demo.yml` switches on development-only options (webhooks to an http address, a seed job, the sample shop). Never use it on a public server.
+- `MERCHANT_ALLOW_INSECURE_WEBHOOK_URLS` and `NOTIFICATION_ALLOW_INSECURE_URLS` are the two switches it sets; the production compose files do not set them.
+- Database connections are capped at 5 per service and each JVM heap at 384 MB (`APG_DB_POOL_SIZE`, `APG_JAVA_OPTS` in `.env` override this).
+- If a docker build stops with "No space left on device", free disk space first, then run the script again: finished layers are reused. An image built while the disk was full can contain a broken jar ("Invalid or corrupt jarfile"); rebuild it with `docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml build --no-cache <service>`.
+- PayU still needs `PAYU_MERCHANT_KEY` / `PAYU_MERCHANT_SALT` in `.env` (sandbox) for real sandbox payments.

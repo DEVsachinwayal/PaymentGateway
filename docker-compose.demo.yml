@@ -1,0 +1,63 @@
+# Demo overlay: the WHOLE project in Docker (only Docker Desktop is needed on the computer).
+#   bash scripts/docker-demo-up.sh        (or:  docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml up -d --build)
+# Adds to the production-like apps file: demo data (seed), the sample shop, and the DEV switches that let a webhook point at the
+# sample shop container (http, private address). LOCAL DEMO ONLY: never use this file on a public server.
+services:
+  merchant-service:
+    environment:
+      MERCHANT_ALLOW_INSECURE_WEBHOOK_URLS: "true"
+
+  notification-service:
+    environment:
+      NOTIFICATION_ALLOW_INSECURE_URLS: "true"
+
+  # Runs once: creates demo@apg.test, a TEST API key, a webhook to the sample shop, 6 payments and 2 payment links.
+  demo-seed:
+    image: alpine:3.20
+    depends_on: [api-gateway, payment-service, merchant-service, webhook-service, dashboard]
+    restart: "no"
+    working_dir: /work
+    volumes:
+      - ./scripts:/work/scripts:ro
+      - demo-state:/state
+    environment:
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in .env}
+      GATEWAY_URL: http://api-gateway:8080
+      PAYMENT_SERVICE_URL: http://payment-service:8084/internal/v1
+      SHOP_WEBHOOK_URL: http://sample-shop:4000/apg-webhook
+      SHOP_ENV_FILE: /state/sample-shop.env
+    command:
+      - sh
+      - -c
+      - |
+        apk add --no-cache bash curl >/dev/null
+        i=0; until curl -s -m 2 http://api-gateway:8180/actuator/health | grep -q UP; do i=$$((i+1)); [ $$i -gt 120 ] && { echo "gateway never became healthy"; exit 1; }; sleep 3; done
+        for h in auth-service:8081 merchant-service:8082 order-service:8083 payment-service:8084 webhook-service:8087 notification-service:8091; do
+          until curl -s -m 2 http://$$h/actuator/health | grep -q UP; do sleep 3; done
+        done
+        bash /work/scripts/demo-seed.sh
+
+  # The merchant's own website (examples/sample-shop). Waits until the seed has written its API key and webhook secret.
+  sample-shop:
+    image: node:22-alpine
+    depends_on: [api-gateway]
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./examples/sample-shop:/app:ro
+      - demo-state:/state:ro
+    environment:
+      APG_URL: http://api-gateway:8080
+      PORT: "4000"
+      RETURN_URL: ""
+    ports: ["4000:4000"]
+    command:
+      - sh
+      - -c
+      - |
+        until [ -f /state/sample-shop.env ]; do sleep 2; done
+        set -a; . /state/sample-shop.env; set +a
+        exec node /app/server.js
+
+volumes:
+  demo-state:

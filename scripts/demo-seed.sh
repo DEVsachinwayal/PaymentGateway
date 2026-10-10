@@ -7,12 +7,14 @@
 # are what you do live during the demo. No refunds are seeded (they would call PayU with fake ids).
 set -u
 cd "$(dirname "$0")/.."
-set -a; . ./.env; set +a
+if [ -f ./.env ]; then set -a; . ./.env; set +a; fi   # in the Docker demo the values come from the container environment
 GW="${GATEWAY_URL:-http://localhost:8080}"
 EMAIL="${DEMO_EMAIL:-demo@apg.test}"
 PASSWORD="${DEMO_PASSWORD:-Demo-Passw0rd-2026}"
 jget() { grep -o "\"$1\":\"[^\"]*\"" | head -1 | cut -d'"' -f4; }
-H="X-Internal-Token: $INTERNAL_SERVICE_TOKEN"; PS=http://localhost:8084/internal/v1
+H="X-Internal-Token: $INTERNAL_SERVICE_TOKEN"; PS="${PAYMENT_SERVICE_URL:-http://localhost:8084/internal/v1}"
+SHOP_WEBHOOK_URL="${SHOP_WEBHOOK_URL:-http://localhost:4000/apg-webhook}"
+SHOP_ENV_FILE="${SHOP_ENV_FILE:-.run/sample-shop.env}"; mkdir -p "$(dirname "$SHOP_ENV_FILE")"
 
 curl -s -o /dev/null -X POST "$GW/api/v1/auth/register" -H 'Content-Type: application/json' \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\",\"fullName\":\"Demo Merchant\"}"
@@ -25,8 +27,8 @@ curl -s -o /dev/null -X POST "$GW/api/v1/merchants" -H "$AUTH" -H 'Content-Type:
 KEY=$(curl -s -X POST "$GW/api/v1/api-keys" -H "$AUTH" -H 'Content-Type: application/json' -d '{"label":"demo shop","mode":"TEST"}' | jget secret)
 [ -n "$KEY" ] || { echo "could not create an API key (account not an admin?)"; exit 1; }
 WH=$(curl -s -X POST "$GW/api/v1/webhook-endpoints" -H "$AUTH" -H 'Content-Type: application/json' \
-  -d '{"url":"http://localhost:4000/apg-webhook","events":["payment.success","payment.failed","refund.success","refund.failed"]}')
-printf 'APG_API_KEY=%s\nAPG_WEBHOOK_SECRET=%s\n' "$KEY" "$(echo "$WH" | jget signingSecret)" > .run/sample-shop.env
+  -d "{\"url\":\"$SHOP_WEBHOOK_URL\",\"events\":[\"payment.success\",\"payment.failed\",\"refund.success\",\"refund.failed\"]}")
+printf 'APG_API_KEY=%s\nAPG_WEBHOOK_SECRET=%s\n' "$KEY" "$(echo "$WH" | jget signingSecret)" > "$SHOP_ENV_FILE"
 
 mkpay() {   # amount_minor description -> payment id (payment starts at CREATED)
   local o p

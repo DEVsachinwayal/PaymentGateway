@@ -6,7 +6,7 @@ WORKDIR /src
 COPY pom.xml .
 COPY libs libs
 COPY services services
-RUN test -n "$SERVICE" && mvn -q -B -DskipTests -pl services/${SERVICE} -am package
+RUN --mount=type=cache,target=/root/.m2 test -n "$SERVICE" && mvn -q -B -DskipTests -pl services/${SERVICE} -am package && mkdir -p /out && cp services/${SERVICE}/target/${SERVICE}-*.jar /out/app.jar
 
 FROM eclipse-temurin:21-jre-alpine
 ARG SERVICE
@@ -16,7 +16,7 @@ ARG HEALTH_PORT=8080
 ENV SERVER_PORT=${PORT} HEALTH_PORT=${HEALTH_PORT} JAVA_OPTS="-XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError"
 RUN addgroup -S apg && adduser -S -G apg apg
 WORKDIR /app
-COPY --from=build /src/services/${SERVICE}/target/${SERVICE}-*.jar /app/app.jar
+COPY --from=build /out/app.jar /app/app.jar
 USER apg
 EXPOSE ${PORT}
 HEALTHCHECK --interval=15s --timeout=3s --start-period=60s --retries=5 \
