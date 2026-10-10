@@ -45,7 +45,15 @@ def json_extractor(var, path):
             + '</JSONPostProcessor><hashTree/>')
 
 
-def sampler(name, method, path, body=None, headers=None, codes=("200",), extract=None, form=False):
+def accept_status(code):
+    # JMeter marks every 4xx as a failure; for the forged-callback test a 400 is the CORRECT answer.
+    return ('<JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="accept ' + code + '" enabled="true">'
+            + prop("stringProp", "scriptLanguage", "groovy")
+            + prop("stringProp", "script", 'if (prev.getResponseCode() == "' + code + '") { prev.setSuccessful(true) }')
+            + '</JSR223PostProcessor><hashTree/>')
+
+
+def sampler(name, method, path, body=None, headers=None, codes=("200",), extract=None, form=False, accept=None):
     args = ""
     if body is not None:
         args = ('<elementProp name="HTTPsampler.Arguments" elementType="Arguments"><collectionProp name="Arguments.arguments">'
@@ -61,6 +69,8 @@ def sampler(name, method, path, body=None, headers=None, codes=("200",), extract
     if headers:
         s += header_manager(headers)
     s += assertion(name + " status", codes)
+    if accept:
+        s += accept_status(accept)
     if extract:
         s += json_extractor(*extract)
     return s + '</hashTree>'
@@ -103,7 +113,7 @@ def build():
     ]
     forged = [sampler("forged payu callback", "POST", "/api/v1/webhooks/payu",
                       "txnid=A${__RandomString(12,abcdef0123456789)}&mihpayid=1&status=success&unmappedstatus=captured&amount=1.00&key=forged&hash=${__RandomString(128,abcdef0123456789)}",
-                      [("Content-Type", "application/x-www-form-urlencoded"), ("Accept", "text/html")], ("400",))]
+                      [("Content-Type", "application/x-www-form-urlencoded"), ("Accept", "text/html")], ("400",), accept="400")]
 
     csv = ('<CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="credentials" enabled="true">'
            + prop("stringProp", "filename", "${__P(creds,/data/credentials.csv)}") + prop("stringProp", "variableNames", "apiKey,email,password")

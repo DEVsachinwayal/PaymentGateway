@@ -34,3 +34,8 @@ Login is deliberately slow (bcrypt cost 12: ~0.3 s on a quiet machine, ~2 s on t
 - Remaining per-request overhead is gateway JWT/key handling + one proxy hop + Hibernate; compare with order-service direct (292 rps create, 345 rps list) after the fixes above.
 - Connection pools (Hikari 5 locally; size from `max_connections / services`), Tomcat threads, Kafka partitions (3) and consumer concurrency, `count(*)` for page totals on very large tables (consider keyset pagination), Redis rate-limit key per merchant/API key instead of per client address.
 - Re-run on OCI hardware, with JMeter, longer soak (>= 30 min) and watch GC/heap, `apg_outbox_oldest_unpublished_seconds`, Kafka lag and DB connections.
+
+## JMeter run (2026-10-10, laptop, perf mode, 10 + dashboard + forged threads, 30 s)
+- 3549 samples, ~116 req/s, avg 261 ms, **0 errors** (create order, create payment, reads, dashboard login + reads, forged callbacks expected 400).
+- The first run showed ~21 % errors. Two causes, both fixed: (1) real bug: concurrent logins of one account hit an optimistic-lock conflict on `users.version` (every successful login wrote the row) -> HTTP 500; `UserAccount.recordSuccess` now writes only when something changes; (2) the plan counted the correct 400 of forged callbacks as failures (JSR223 post-processor now accepts it).
+- Run it yourself: `bash scripts/perf-start.sh`, `bash performance/setup-data.sh`, then jmeter with `-Jcreds=<absolute path of performance/data/credentials.csv>`.

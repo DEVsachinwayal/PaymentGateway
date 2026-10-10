@@ -51,6 +51,8 @@ public class UserAccount {
     }
 
     public void recordSuccess(Instant now) {
+        // No write when nothing changes: concurrent successful logins of one account must not collide on @Version.
+        if (failedAttempts == 0 && lockedUntil == null) return;
         failedAttempts = 0;
         lockedUntil = null;
         updatedAt = now;
