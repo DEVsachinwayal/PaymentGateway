@@ -32,6 +32,7 @@
 | ledger | accounts, immutable transactions/entries, audit | consumes Kafka |
 | settlement | settlement batches/items, reconciliation, exceptions, merchant shares | payment (attempt lookup), refund |
 | notification | merchant webhook jobs and attempts | merchant (subscribers), consumes Kafka |
+| payment-link | payment links and attempts (public page `/pay/<code>`) | merchant (profile), order, payment, orchestrator; consumes Kafka |
 
 ## Payment flow (happy path)
 ```mermaid

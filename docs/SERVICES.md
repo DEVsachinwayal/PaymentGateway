@@ -14,6 +14,7 @@
 | ledger-service | 8089 | apg_ledger | immutable double-entry ledger, Kafka consumer | 13 |
 | settlement-service | 8090 | apg_settlement | provider settlement import, reconciliation, exceptions, merchant shares | 10 |
 | notification-service | 8091 | apg_notification | signed merchant webhooks, retries, delivery history | 12 |
+| payment-link-service | 8092 | apg_paymentlink | shareable payment links, public customer page | 15 |
 | frontend (Vite) | 5173 | - | merchant dashboard | build only |
 | libs/apg-common | - | - | envelope, errors, correlation id, idempotency, trust filter, outbox publisher | 14 |
 
