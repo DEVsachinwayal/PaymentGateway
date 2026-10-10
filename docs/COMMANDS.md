@@ -25,8 +25,8 @@ Run everything in **Git Bash** from the project root unless stated otherwise (`c
 | `bash scripts/docker-demo-down.sh` | Stops it (add `--wipe` to delete the database too) |
 | `docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml up -d --build` | The same without the script |
 | `docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml ps` | Container status |
+| (included in the commands above) | Grafana http://localhost:3000 (admin/admin, dashboard "APG overview") and Prometheus http://localhost:9090 start with the Docker demo. If the Grafana image cannot be downloaded, set `APG_GRAFANA_IMAGE=grafana/grafana:latest` first |
 | `docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml logs -f payment-service` | Follow one service's log |
-| `docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml -f docker-compose.observability.yml --profile observability up -d prometheus grafana` | Adds Prometheus (:9090) and Grafana (:3000, admin/admin, dashboard "APG overview") to the all-in-Docker mode. If the Grafana image cannot be downloaded, set `APG_GRAFANA_IMAGE=grafana/grafana:latest` first |
 
 ## 2. Setup (one time)
 
