@@ -41,6 +41,15 @@ Order status: CREATED -> PAID / CANCELLED / EXPIRED (updated by payment flow lat
 | GET | /api/v1/payments/{id}/status | state + full history |
 | GET | /api/v1/payments?page&size | |
 
+## Payment links (payment-link-service; API key or dashboard user, create/cancel = API key or MERCHANT_ADMIN)
+| Method | Path | Notes |
+|---|---|---|
+| POST | /api/v1/payment-links | `Idempotency-Key` required. Body {amount (minor units), currency, [description], [expiresInHours 1-2160, default 168], [oneTime default true], [returnUrl https], [customer{name,email,phone}]}. 201 {id, code, url, status ACTIVE, ...}. Errors: 400 VALIDATION_FAILED/AMOUNT_TOO_LARGE, 403 MERCHANT_SUSPENDED, 422 IDEMPOTENCY_KEY_REUSED |
+| GET | /api/v1/payment-links?status&page&size | ACTIVE / PAID / EXPIRED / CANCELLED |
+| GET | /api/v1/payment-links/{id} | 404 for other merchants' links |
+| POST | /api/v1/payment-links/{id}/cancel | only ACTIVE (409 otherwise) |
+Public (no auth): `GET /pay/{code}` customer page, `POST /pay/{code}/start` -> 303 to the hosted checkout (409 payment in progress, 410 paid/expired/cancelled, 404 unknown).
+
 ## Refunds (refund-service; API key or dashboard user, create = API key or MERCHANT_ADMIN)
 | Method | Path | Notes |
 |---|---|---|

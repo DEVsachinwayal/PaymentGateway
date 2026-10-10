@@ -23,4 +23,6 @@
 - [ ] Email channel + notification templates (needs a provider)
 - [ ] Rate limiting per API key/merchant (today per client address); Redis cache for provider health
 - [ ] Image signing/SBOM; staging environment; migration dry-run job
-- [ ] Phase 2 products (outside the spec): payment links, invoices, QR, subscriptions
+- [x] Payment links (done: one-time/reusable, expiry, cancel, public page, dashboard)
+- [ ] Payment links follow-ups: QR code, send by SMS/email, partial payments, link-level analytics
+- [ ] Phase 2 products (outside the spec): invoices, subscriptions

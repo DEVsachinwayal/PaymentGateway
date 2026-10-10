@@ -14,6 +14,7 @@ One PostgreSQL 16 database per service (created by `infrastructure/postgres/init
 | apg_refund | refund-service | refunds, refund_attempts, outbox_events, idempotency_keys, audit_events |
 | apg_ledger | ledger-service | ledger_accounts, ledger_transactions, ledger_entries, audit_events |
 | apg_settlement | settlement-service | settlements, settlement_items, reconciliation_runs, reconciliation_exceptions, merchant_settlements, outbox_events, audit_events |
+| apg_paymentlink | payment-link-service | payment_links, link_attempts, idempotency_keys, audit_events |
 | apg_notification | notification-service | notification_jobs, notification_attempts, audit_events |
 
 ## Integrity enforced by the database itself
