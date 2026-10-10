@@ -18,6 +18,15 @@ Run everything in **Git Bash** from the project root unless stated otherwise (`c
 | `cd frontend && npm install` | Installs dashboard packages (first time on a computer) |
 | `set -a; . .run/sample-shop.env; set +a; node examples/sample-shop/server.js` | Sample shop on http://localhost:4000 (started by `demo-up.sh` already) |
 
+### Everything in Docker (only Docker Desktop needed)
+| Command | What it does |
+|---|---|
+| `bash scripts/docker-demo-up.sh` | Builds the images, starts 13 services + dashboard + sample shop, seeds demo data; dashboard http://localhost:8000 |
+| `bash scripts/docker-demo-down.sh` | Stops it (add `--wipe` to delete the database too) |
+| `docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml up -d --build` | The same without the script |
+| `docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml ps` | Container status |
+| `docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml logs -f payment-service` | Follow one service's log |
+
 ## 2. Setup (one time)
 
 | Command | What it does |

@@ -6,6 +6,9 @@ x-app-env: &app-env
   KAFKA_BOOTSTRAP_SERVERS: kafka:19092
   APG_EVENTS_ENABLED: "true"
   REDIS_HOST: redis
+  # 13 services x the default pool of 10 would exceed Postgres' 100 connections; heap capped so 13 JVMs fit one machine
+  SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${APG_DB_POOL_SIZE:-5}
+  JAVA_OPTS: ${APG_JAVA_OPTS:--Xms64m -Xmx384m -XX:MaxMetaspaceSize=192m -XX:+ExitOnOutOfMemoryError}
   AUTH_SERVICE_URI: http://auth-service:8081
   MERCHANT_SERVICE_URI: http://merchant-service:8082
   ORDER_SERVICE_URI: http://order-service:8083
