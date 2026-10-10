@@ -110,7 +110,7 @@ POST /api/v1/payments/{id}/checkout                   -> checkoutUrl: send the c
 GET  /api/v1/payments/{id}/status                     -> verified state + history
 POST /api/v1/refunds {"paymentId":"..."}              (Idempotency-Key)
 ```
-Full reference: `docs/API_REFERENCE.md`; merchant integration (webhook signature checking): `docs/INTEGRATION_GUIDE.md`.
+Full reference: `docs/API_REFERENCE.md`; **every script/command of the project: `docs/COMMANDS.md`**; merchant integration (webhook signature checking): `docs/INTEGRATION_GUIDE.md`.
 
 ## 6. PayU sandbox test details (type these on PayU's page)
 
