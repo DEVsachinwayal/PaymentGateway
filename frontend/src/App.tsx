@@ -17,10 +17,12 @@ import Settlements from './pages/Settlements'
 import Deliveries from './pages/Deliveries'
 import Activity from './pages/Activity'
 import NewPayment from './pages/NewPayment'
+import PaymentLinks from './pages/PaymentLinks'
 
 const NAV: [string, string, string][] = [
   ['/', '🏠', 'Overview'],
   ['/new-payment', '➕', 'Collect payment'],
+  ['/payment-links', '🔗', 'Payment links'],
   ['/payments', '💳', 'Payments'],
   ['/orders', '🧾', 'Orders'],
   ['/refunds', '↩️', 'Refunds'],
@@ -34,7 +36,7 @@ const DEV: [string, string, string][] = [
   ['/activity', '📜', 'Activity log'],
   ['/settings', '⚙️', 'Settings'],
 ]
-const SOON = ['Payment links']
+const SOON: string[] = []
 
 export default function App() {
   const { ready, email, merchant, needsOnboarding, logout } = useAuth()
@@ -77,6 +79,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Overview />} />
           <Route path="/new-payment" element={<NewPayment />} />
+          <Route path="/payment-links" element={<PaymentLinks />} />
           <Route path="/payments" element={<Payments />} />
           <Route path="/payments/:id" element={<PaymentDetail />} />
           <Route path="/orders" element={<Orders />} />

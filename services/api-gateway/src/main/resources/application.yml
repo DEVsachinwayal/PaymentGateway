@@ -41,6 +41,7 @@ apg:
     ledger-uri: ${LEDGER_SERVICE_URI:http://localhost:8089}
     settlement-uri: ${SETTLEMENT_SERVICE_URI:http://localhost:8090}
     notification-uri: ${NOTIFICATION_SERVICE_URI:http://localhost:8091}
+    payment-link-uri: ${PAYMENT_LINK_SERVICE_URI:http://localhost:8092}
     auth-uri: ${AUTH_SERVICE_URI:http://localhost:8081}
     cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
     max-request-bytes: 262144

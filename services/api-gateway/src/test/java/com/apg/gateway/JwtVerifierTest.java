@@ -26,7 +26,7 @@ class JwtVerifierTest {
     private static String kid(KeyPair kp) { return JwtVerifier.thumbprint(kp.getPublic().getEncoded()); }
 
     private static GatewayProperties props(String secret, String publicKeys) {
-        return new GatewayProperties(secret, publicKeys, "internal-token-for-tests-123", "http://a", "http://m", "http://o", "http://p", "http://o2", "http://w", "http://r", "http://l", "http://s", "http://n",
+        return new GatewayProperties(secret, publicKeys, "internal-token-for-tests-123", "http://a", "http://m", "http://o", "http://p", "http://o2", "http://w", "http://r", "http://l", "http://s", "http://n", "http://pl",
                 List.of("http://localhost:5173"), 1000, new GatewayProperties.RateLimit(10, 20));
     }
 

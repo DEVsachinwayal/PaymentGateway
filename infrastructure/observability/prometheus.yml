@@ -21,3 +21,4 @@ scrape_configs:
           - host.docker.internal:8089   # ledger-service
           - host.docker.internal:8090   # settlement-service
           - host.docker.internal:8091   # notification-service
+          - host.docker.internal:8092   # payment-link-service

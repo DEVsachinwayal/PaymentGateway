@@ -98,6 +98,19 @@ public class GatewayConfig {
                                 .setRequestSize(props.maxRequestBytes())
                                 .secureHeaders())
                         .uri(props.notificationUri()))
+                // payment links: merchant API (authenticated) ...
+                .route("payment-link-api", r -> r.path("/api/v1/payment-links/**", "/api/v1/payment-links")
+                        .filters(f -> f
+                                .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))
+                                .setRequestSize(props.maxRequestBytes())
+                                .secureHeaders())
+                        .uri(props.paymentLinkUri()))
+                // ... and the public customer page (the service sets its own CSP with a nonce, so no secureHeaders here)
+                .route("payment-link-page", r -> r.path("/pay/**")
+                        .filters(f -> f
+                                .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))
+                                .setRequestSize(4096L))
+                        .uri(props.paymentLinkUri()))
                 .route("payment-service", r -> r.path("/api/v1/payments/**", "/api/v1/payments")
                         .filters(f -> f
                                 .requestRateLimiter(c -> c.setRateLimiter(limiter).setKeyResolver(keyResolver))

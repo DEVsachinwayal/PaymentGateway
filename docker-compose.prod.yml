@@ -28,5 +28,7 @@ services:
     image: ${OCIR_PREFIX}/apg/settlement-service:${APG_TAG}
   notification-service:
     image: ${OCIR_PREFIX}/apg/notification-service:${APG_TAG}
+  payment-link-service:
+    image: ${OCIR_PREFIX}/apg/payment-link-service:${APG_TAG}
   dashboard:
     image: ${OCIR_PREFIX}/apg/dashboard:${APG_TAG}

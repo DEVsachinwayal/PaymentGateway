@@ -96,3 +96,4 @@ export function toMinor(text: string): number | null {
 }
 
 export const newKey = () => crypto.randomUUID()
+export interface PaymentLink { id: string; code: string; url: string; amount: number; currency: string; description?: string; status: string; oneTime: boolean; expiresAt: string; createdAt: string; paidAt?: string; successfulPayments: number }

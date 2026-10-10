@@ -109,10 +109,11 @@ class GatewayFlowTest {
         r.add("apg.gateway.ledger-uri", () -> url);
         r.add("apg.gateway.settlement-uri", () -> url);
         r.add("apg.gateway.notification-uri", () -> url);
+        r.add("apg.gateway.payment-link-uri", () -> url);
         r.add("apg.gateway.api-key-cache-ttl", () -> "1s");
         r.add("apg.gateway.internal-token", () -> "internal-token-for-tests-123");
         r.add("apg.gateway.rate-limit.replenish-per-second", () -> 1);
-        r.add("apg.gateway.rate-limit.burst", () -> 3);
+        r.add("apg.gateway.rate-limit.burst", () -> 6);       // per route and client; the 12-request limiter test below still exceeds it
         r.add("spring.data.redis.host", redis::getHost);
         r.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
         r.add("spring.data.redis.password", () -> "");
@@ -284,6 +285,19 @@ class GatewayFlowTest {
         // the real dashboard origin is still allowed
         web.get().uri("/api/v1/orders/abc").header("Origin", "http://localhost:5173").header("Authorization", "Bearer sk_test_good.secret")
                 .exchange().expectStatus().isOk().expectHeader().valueEquals("Access-Control-Allow-Origin", "http://localhost:5173");
+    }
+
+    @Test @Order(3)
+    void paymentLinkPageIsPublicButTheMerchantApiIsNot() throws Exception {
+        Thread.sleep(3500);                                    // test limiter: burst 3, refill 1/s - keep this test's calls paced
+        web.get().uri("/pay/AbCdEfGhJk").exchange().expectStatus().isOk().expectBody().jsonPath("$.path").isEqualTo("/pay/AbCdEfGhJk");
+        web.post().uri("/pay/AbCdEfGhJk/start").header("X-User-Id", "attacker").exchange().expectStatus().isOk()
+                .expectBody().jsonPath("$.userId").isEqualTo("").jsonPath("$.internal").isEqualTo("internal-token-for-tests-123");
+        web.get().uri("/api/v1/payment-links").exchange().expectStatus().isUnauthorized();          // rejected before the rate limiter
+        Thread.sleep(1200);
+        web.get().uri("/api/v1/payment-links").header("Authorization", "Bearer sk_test_good.secret").exchange().expectStatus().isOk()
+                .expectBody().jsonPath("$.merchant").isEqualTo("merch-api");
+        web.delete().uri("/pay/AbCdEfGhJk").exchange().expectStatus().isUnauthorized();      // only GET and POST are public
     }
 
     @Test @Order(2)

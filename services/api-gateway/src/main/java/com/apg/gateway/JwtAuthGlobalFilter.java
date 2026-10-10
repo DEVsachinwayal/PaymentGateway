@@ -30,7 +30,7 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
             List.of("X-User-Id", "X-User-Email", "X-User-Roles", "X-Merchant-Id", "X-Auth-Type", "X-Api-Key-Id", "X-Internal-Token");
     private static final List<String> PUBLIC_POST = List.of(
             "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout");
-    private static final List<String> API_KEY_PATHS = List.of("/api/v1/orders", "/api/v1/payments", "/api/v1/refunds");
+    private static final List<String> API_KEY_PATHS = List.of("/api/v1/orders", "/api/v1/payments", "/api/v1/refunds", "/api/v1/payment-links");
 
     private final JwtVerifier verifier;
     private final String internalToken;
@@ -117,6 +117,8 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
                 || path.startsWith("/actuator/health")
                 // customer-facing: hosted checkout redirect page (signed token) ...
                 || (HttpMethod.GET.equals(m) && (path.startsWith("/checkout/") || path.equals("/payment-result")))
+                // customer-facing payment link page and its Pay button (the unguessable code is the only credential)
+                || ((HttpMethod.GET.equals(m) || HttpMethod.POST.equals(m)) && path.startsWith("/pay/"))
                 // ... and provider callbacks, which are authenticated by the provider's signature, not by us (M8)
                 || (HttpMethod.POST.equals(m) && path.startsWith("/api/v1/webhooks/"));
     }
