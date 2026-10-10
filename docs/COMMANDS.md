@@ -26,6 +26,7 @@ Run everything in **Git Bash** from the project root unless stated otherwise (`c
 | `docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml up -d --build` | The same without the script |
 | `docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml ps` | Container status |
 | `docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml logs -f payment-service` | Follow one service's log |
+| `docker compose -f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.demo.yml -f docker-compose.observability.yml --profile observability up -d prometheus grafana` | Adds Prometheus (:9090) and Grafana (:3000, admin/admin, dashboard "APG overview") to the all-in-Docker mode. If the Grafana image cannot be downloaded, set `APG_GRAFANA_IMAGE=grafana/grafana:latest` first |
 
 ## 2. Setup (one time)
 
