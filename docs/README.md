@@ -4,6 +4,7 @@ Start with the repository `README.md` (run it locally in 5 steps) and `WORK.md` 
 
 | I want to... | Read |
 |---|---|
+| present it (final-year demo) | DEMO_GUIDE.md (script, test cards, viva Q&A), `scripts/demo-up.sh` |
 | understand the system | ARCHITECTURE.md, SERVICES.md, PAYMENT_LIFECYCLE.md, DECISIONS.md (why) |
 | accept payments on my own website | INTEGRATION_GUIDE.md (+ `examples/sample-shop`) |
 | call the API | API_REFERENCE.md (auth, idempotency, errors), WEBHOOKS.md + EVENTS.md (merchant webhooks, signatures) |
