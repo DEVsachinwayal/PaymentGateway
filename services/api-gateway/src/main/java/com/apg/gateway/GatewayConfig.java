@@ -127,7 +127,8 @@ public class GatewayConfig {
      * Those endpoints are protected by their own means (provider signature, signed checkout token, no state change).
      */
     static boolean providerFacing(String path) {
-        return path.startsWith("/api/v1/webhooks/") || path.startsWith("/checkout/") || path.equals("/payment-result");
+        // /pay/: the payment link page posts its own form with "Referrer-Policy: no-referrer", which makes browsers send "Origin: null"
+        return path.startsWith("/api/v1/webhooks/") || path.startsWith("/checkout/") || path.equals("/payment-result") || path.startsWith("/pay/");
     }
 
     @Bean
