@@ -11,6 +11,19 @@ services:
     environment:
       NOTIFICATION_ALLOW_INSECURE_URLS: "true"
 
+  # Monitoring is part of the demo: Prometheus (:9090) scrapes the containers by name, Grafana (:3000, admin/admin) shows "APG overview".
+  # In the base file both sit behind the "observability" profile (host-mode dev); here that profile is cleared so they start by default.
+  prometheus:
+    profiles: !reset []
+    volumes:
+      - ./infrastructure/observability/prometheus-docker.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+
+  grafana:
+    profiles: !reset []
+    # set APG_GRAFANA_IMAGE=grafana/grafana:latest if the pinned image cannot be downloaded on a flaky connection
+    image: ${APG_GRAFANA_IMAGE:-grafana/grafana:11.3.1}
+
   # Runs once: creates demo@apg.test, a TEST API key, a webhook to the sample shop, 6 payments and 2 payment links.
   demo-seed:
     image: alpine:3.20

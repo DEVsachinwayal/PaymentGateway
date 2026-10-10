@@ -37,6 +37,8 @@ The first run takes 20-40 minutes (images are built); later runs take 1-2 minute
 | Dashboard | http://localhost:8000 |
 | Login | `demo@apg.test` / `Demo-Passw0rd-2026` |
 | Sample shop | http://localhost:4000 |
+| Grafana (monitoring) | http://localhost:3000, `admin` / `admin` (dashboard "APG overview") |
+| Prometheus | http://localhost:9090 |
 
 **5. Pay** (PayU sandbox, no real money): card `5123456789012346`, CVV `123`, any future expiry, OTP `123456`; UPI `anything@payu`; net banking user `payu` / password `payu`, OTP `123456`; wallet `7777777777`, OTP `888888`. More in section 6.
 
